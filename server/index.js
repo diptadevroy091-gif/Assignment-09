@@ -4,7 +4,9 @@ const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
+
 const equipmentRoutes = require("./routes/equipmentRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
@@ -25,10 +27,11 @@ app.get("/", (req, res) => {
   });
 });
 
-// Equipment Routes
+// API Routes
 app.use("/api/equipment", equipmentRoutes);
+app.use("/api/auth", authRoutes);
 
-// Start server after database connection
+// Start Server
 const startServer = async () => {
   try {
     await connectDB();

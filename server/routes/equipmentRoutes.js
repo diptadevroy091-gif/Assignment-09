@@ -5,10 +5,16 @@ const {
   createEquipment,
   getApprovedEquipment,
   getEquipmentById,
+  getAllEquipment,
+  updateEquipmentStatus,
 } = require("../controllers/equipmentController");
 
 const verifyToken = require("../middleware/verifyToken");
-const { verifyOwner } = require("../middleware/verifyRole");
+
+const {
+  verifyOwner,
+  verifyAdmin,
+} = require("../middleware/verifyRole");
 
 const router = express.Router();
 
@@ -17,6 +23,17 @@ router.post("/", verifyToken, verifyOwner, createEquipment);
 
 // Get all approved equipment
 router.get("/", getApprovedEquipment);
+
+// Get all equipment (Admin only)
+router.get("/admin/all", verifyToken, verifyAdmin, getAllEquipment);
+
+// Update equipment status (Admin only)
+router.patch(
+  "/admin/:id/status",
+  verifyToken,
+  verifyAdmin,
+  updateEquipmentStatus
+);
 
 // Get single equipment
 router.get("/:id", getEquipmentById);

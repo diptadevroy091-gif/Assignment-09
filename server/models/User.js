@@ -17,6 +17,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    password: {
+      type: String,
+      default: "",
+      select: false,
+    },
+
     photoURL: {
       type: String,
       default: "",

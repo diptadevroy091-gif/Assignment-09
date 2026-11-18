@@ -8,6 +8,7 @@ const connectDB = require("./config/db");
 const equipmentRoutes = require("./routes/equipmentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.get("/", (req, res) => {
 app.use("/api/equipment", equipmentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // Start Server
 const startServer = async () => {

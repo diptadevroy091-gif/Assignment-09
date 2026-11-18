@@ -1,0 +1,161 @@
+
+const Booking = require("../models/Booking");
+const Equipment = require("../models/Equipment");
+
+// Create new booking
+const createBooking = async (req, res) => {
+  try {
+    const {
+      equipmentId,
+      startDate,
+      endDate,
+      quantity,
+      contactNumber,
+      deliveryAddress,
+      notes,
+    } = req.body;
+
+    if (
+      !equipmentId ||
+      !startDate ||
+      !endDate ||
+      !quantity ||
+      !contactNumber ||
+      !deliveryAddress
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide all required booking information!",
+      });
+    }
+
+    const equipment = await Equipment.findOne({
+      _id: equipmentId,
+      status: "Approved",
+    });
+
+    if (!equipment) {
+      return res.status(404).json({
+        success: false,
+        message: "Equipment not found or not available!",
+      });
+    }
+
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const requestedQuantity = Number(quantity);
+
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      end <= start
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide valid rental dates!",
+      });
+    }
+
+    if (
+      !Number.isInteger(requestedQuantity) ||
+      requestedQuantity < 1 ||
+      requestedQuantity > equipment.availableQuantity
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Requested quantity is not available!",
+      });
+    }
+
+    const duration = Math.ceil(
+      (end - start) / (1000 * 60 * 60 * 24)
+    );
+
+    let rentalUnits = duration;
+
+    if (equipment.rentalType === "Weekly") {
+      rentalUnits = Math.ceil(duration / 7);
+    } else if (equipment.rentalType === "Monthly") {
+      rentalUnits = Math.ceil(duration / 30);
+    }
+
+    const totalAmount =
+      equipment.rentalPrice * rentalUnits * requestedQuantity;
+
+    const booking = await Booking.create({
+      equipmentId,
+      customerInfo: {
+        userId: req.user.id,
+        name: req.user.name || req.user.email,
+        email: req.user.email,
+      },
+      ownerId: equipment.ownerInfo.userId,
+      startDate: start,
+      endDate: end,
+      quantity: requestedQuantity,
+      contactNumber,
+      deliveryAddress,
+      notes: notes || "",
+      totalAmount,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Booking created successfully!",
+      data: booking,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Get logged-in customer's bookings
+const getMyBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({
+      "customerInfo.userId": req.user.id,
+    })
+      .populate("equipmentId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      total: bookings.length,
+      data: bookings,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Get all bookings (Admin only)
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find()
+      .populate("equipmentId")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      total: bookings.length,
+      data: bookings,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+module.exports = {
+  createBooking,
+  getMyBookings,
+  getAllBookings,
+};

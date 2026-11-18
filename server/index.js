@@ -9,13 +9,14 @@ const equipmentRoutes = require("./routes/equipmentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 
 const app = express();
 
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: process.env.CLIENT_URL || "http://localhost:3000",
   })
 );
 
@@ -34,6 +35,7 @@ app.use("/api/equipment", equipmentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/api/payments", paymentRoutes);
 
 // Start Server
 const startServer = async () => {

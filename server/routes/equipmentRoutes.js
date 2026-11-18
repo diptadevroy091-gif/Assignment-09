@@ -7,10 +7,13 @@ const {
   getEquipmentById,
 } = require("../controllers/equipmentController");
 
+const verifyToken = require("../middleware/verifyToken");
+const { verifyOwner } = require("../middleware/verifyRole");
+
 const router = express.Router();
 
-// Create equipment
-router.post("/", createEquipment);
+// Create equipment (Owner only)
+router.post("/", verifyToken, verifyOwner, createEquipment);
 
 // Get all approved equipment
 router.get("/", getApprovedEquipment);

@@ -1,14 +1,55 @@
 
 const Equipment = require("../models/Equipment");
+const User = require("../models/User");
 
-// Create new equipment
+// Create new equipment (Owner only)
 const createEquipment = async (req, res) => {
   try {
-    const equipment = await Equipment.create(req.body);
+    // Find logged-in owner
+    const owner = await User.findById(req.user.id);
+
+    if (!owner) {
+      return res.status(404).json({
+        success: false,
+        message: "Owner account not found!",
+      });
+    }
+
+    if (owner.role !== "Owner") {
+      return res.status(403).json({
+        success: false,
+        message: "Only equipment owners can add equipment!",
+      });
+    }
+
+    // Create equipment with verified owner information
+    const equipment = await Equipment.create({
+      equipmentName: req.body.equipmentName,
+      description: req.body.description,
+      category: req.body.category,
+      location: req.body.location,
+      rentalPrice: req.body.rentalPrice,
+      rentalType: req.body.rentalType,
+      availableQuantity: req.body.availableQuantity,
+      condition: req.body.condition,
+      brand: req.body.brand,
+      model: req.body.model,
+      imageUrl: req.body.imageUrl,
+      rentalTerms: req.body.rentalTerms,
+
+      ownerInfo: {
+        userId: owner._id.toString(),
+        name: owner.name,
+        email: owner.email,
+      },
+
+      status: "Pending",
+    });
 
     res.status(201).json({
       success: true,
-      message: "Equipment added successfully!",
+      message:
+        "Equipment added successfully! Waiting for admin approval.",
       data: equipment,
     });
   } catch (error) {
@@ -22,8 +63,9 @@ const createEquipment = async (req, res) => {
 // Get all approved equipment
 const getApprovedEquipment = async (req, res) => {
   try {
-    const equipment = await Equipment.find({ status: "Approved" })
-      .sort({ createdAt: -1 });
+    const equipment = await Equipment.find({
+      status: "Approved",
+    }).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
@@ -65,7 +107,9 @@ const getEquipmentById = async (req, res) => {
 // Get all equipment for Admin
 const getAllEquipment = async (req, res) => {
   try {
-    const equipment = await Equipment.find().sort({ createdAt: -1 });
+    const equipment = await Equipment.find().sort({
+      createdAt: -1,
+    });
 
     res.status(200).json({
       success: true,
@@ -80,7 +124,7 @@ const getAllEquipment = async (req, res) => {
   }
 };
 
-// Update equipment status (Admin)
+// Update equipment status (Admin only)
 const updateEquipmentStatus = async (req, res) => {
   try {
     const { status } = req.body;

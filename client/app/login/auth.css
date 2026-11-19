@@ -223,3 +223,98 @@
     padding: 45px 0;
   }
 }
+
+/* ================================
+   SOCIAL LOGIN BUTTONS
+================================ */
+
+.social-divider {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 25px 0 20px;
+}
+
+.social-divider span {
+  flex: 1;
+  height: 1px;
+  background: var(--border, #e5e5e5);
+}
+
+.social-divider p {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--muted, #888);
+  white-space: nowrap;
+}
+
+.social-login-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.social-login-btn {
+  width: 100%;
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.social-login-btn svg {
+  flex-shrink: 0;
+}
+
+.google-login-btn {
+  background: #ffffff;
+  color: #202124;
+  border: 1px solid #dadce0;
+}
+
+.google-login-btn:hover {
+  background: #f8faff;
+  border-color: #4285f4;
+  transform: translateY(-2px);
+}
+
+.github-login-btn {
+  background: #24292f;
+  color: #ffffff;
+  border: 1px solid #24292f;
+}
+
+.github-login-btn:hover {
+  background: #32383f;
+  border-color: #32383f;
+  transform: translateY(-2px);
+}
+
+.social-login-btn:active {
+  transform: scale(0.98);
+}
+
+.social-login-btn:focus-visible {
+  outline: 3px solid #4285f4;
+  outline-offset: 3px;
+}
+
+@media (max-width: 480px) {
+  .social-login-btn {
+    min-height: 48px;
+    font-size: 13px;
+  }
+
+  .social-divider {
+    margin: 22px 0 17px;
+  }
+}

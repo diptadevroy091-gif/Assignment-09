@@ -6,6 +6,9 @@ const GitHubStrategy = require("passport-github2").Strategy;
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 
+const SERVER_URL =
+  process.env.SERVER_URL || "http://localhost:5000";
+
 const generateToken = (user) => {
   return jwt.sign(
     {
@@ -26,7 +29,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "/api/auth/google/callback",
+      callbackURL: `${SERVER_URL}/api/auth/google/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
@@ -37,10 +40,7 @@ passport.use(
         }
 
         let user = await User.findOne({
-          $or: [
-            { googleId: profile.id },
-            { email },
-          ],
+          $or: [{ googleId: profile.id }, { email }],
         });
 
         if (user?.isBlocked) {
@@ -77,14 +77,13 @@ passport.use(
     {
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: "/api/auth/github/callback",
-      scope: ["user:email"],
+      callbackURL: `${SERVER_URL}/api/auth/github/callback`,
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
-        const profileEmail = profile.emails?.find(
-          (item) => item.primary
-        )?.value || profile.emails?.[0]?.value;
+        const profileEmail =
+          profile.emails?.find((item) => item.primary)?.value ||
+          profile.emails?.[0]?.value;
 
         const email = profileEmail?.toLowerCase();
 
@@ -93,10 +92,7 @@ passport.use(
         }
 
         let user = await User.findOne({
-          $or: [
-            { githubId: profile.id },
-            { email },
-          ],
+          $or: [{ githubId: profile.id }, { email }],
         });
 
         if (user?.isBlocked) {

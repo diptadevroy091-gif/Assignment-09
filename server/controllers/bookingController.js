@@ -1,8 +1,9 @@
 
 const Booking = require("../models/Booking");
 const Equipment = require("../models/Equipment");
+const User = require("../models/User");
 
-// Create new booking
+// Create new booking (Customer only)
 const createBooking = async (req, res) => {
   try {
     const {
@@ -20,13 +21,21 @@ const createBooking = async (req, res) => {
       !equipmentId ||
       !startDate ||
       !endDate ||
-      !quantity ||
+      quantity === undefined ||
       !contactNumber ||
       !deliveryAddress
     ) {
       return res.status(400).json({
         success: false,
         message: "Please provide all required booking information!",
+      });
+    }
+
+    // Validate equipment ID
+    if (!/^[0-9a-fA-F]{24}$/.test(equipmentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid equipment ID!",
       });
     }
 
@@ -43,11 +52,27 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Find logged-in customer
+    const customer = await User.findById(req.user.id);
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer account not found!",
+      });
+    }
+
+    if (customer.isBlocked || customer.role !== "Customer") {
+      return res.status(403).json({
+        success: false,
+        message: "You are not allowed to create a booking!",
+      });
+    }
+
+    // Validate rental dates
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const requestedQuantity = Number(quantity);
 
-    // Validate dates
     if (
       Number.isNaN(start.getTime()) ||
       Number.isNaN(end.getTime()) ||
@@ -60,6 +85,8 @@ const createBooking = async (req, res) => {
     }
 
     // Validate quantity
+    const requestedQuantity = Number(quantity);
+
     if (
       !Number.isInteger(requestedQuantity) ||
       requestedQuantity < 1 ||
@@ -86,23 +113,30 @@ const createBooking = async (req, res) => {
 
     // Calculate total rental amount
     const totalAmount =
-      equipment.rentalPrice * rentalUnits * requestedQuantity;
+      equipment.rentalPrice *
+      rentalUnits *
+      requestedQuantity;
 
-    // Create pending booking
+    // Create booking
     const booking = await Booking.create({
-      equipmentId,
+      equipmentId: equipment._id,
+
       customerInfo: {
-        userId: req.user.id,
-        name: req.user.name || req.user.email,
-        email: req.user.email,
+        userId: customer._id.toString(),
+        name: customer.name,
+        email: customer.email,
       },
+
       ownerId: equipment.ownerInfo.userId,
+
       startDate: start,
       endDate: end,
       quantity: requestedQuantity,
-      contactNumber,
-      deliveryAddress,
+
+      contactNumber: contactNumber.trim(),
+      deliveryAddress: deliveryAddress.trim(),
       notes: notes || "",
+
       totalAmount,
       paymentStatus: "Pending",
       bookingStatus: "Pending",

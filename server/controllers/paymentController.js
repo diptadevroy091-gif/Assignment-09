@@ -44,13 +44,19 @@ const createCheckoutSession = async (req, res) => {
       });
     }
 
+    // Validate equipment
+    if (!booking.equipmentId) {
+      return res.status(404).json({
+        success: false,
+        message: "Equipment not found!",
+      });
+    }
+
     // Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
-
       customer_email: booking.customerInfo.email,
-
       client_reference_id: booking._id.toString(),
 
       metadata: {
@@ -65,9 +71,7 @@ const createCheckoutSession = async (req, res) => {
             product_data: {
               name: booking.equipmentId.equipmentName,
             },
-            unit_amount: Math.round(
-              booking.totalAmount * 100
-            ),
+            unit_amount: Math.round(booking.totalAmount * 100),
           },
           quantity: 1,
         },
@@ -77,17 +81,30 @@ const createCheckoutSession = async (req, res) => {
       cancel_url: `${process.env.CLIENT_URL}/payment-cancel`,
     });
 
-    // Save Stripe session ID
+    // Save Payment Record
+    await Payment.create({
+      bookingId: booking._id,
+      customerId: booking.customerInfo.userId,
+      customerEmail: booking.customerInfo.email,
+      amount: booking.totalAmount,
+      currency: "usd",
+      stripeSessionId: session.id,
+      paymentStatus: "Pending",
+    });
+
+    // Save Stripe Session ID in Booking
     booking.stripeSessionId = session.id;
     await booking.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Checkout session created successfully!",
       url: session.url,
     });
   } catch (error) {
-    res.status(500).json({
+    console.error("Checkout Session Error:", error.message);
+
+    return res.status(500).json({
       success: false,
       message: error.message,
     });

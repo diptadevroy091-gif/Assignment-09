@@ -1,0 +1,443 @@
+
+/* =====================================
+   EQUIPORA EQUIPMENT PAGE
+===================================== */
+
+.equipment-page {
+  --eq-bg: #f8f9f5;
+  --eq-card: #ffffff;
+  --eq-text: #171b14;
+  --eq-muted: #73796d;
+  --eq-border: #e5e9df;
+  --eq-input: #ffffff;
+  --eq-input-text: #171b14;
+  --eq-banner: #191d16;
+  --eq-shadow: 0 12px 30px rgba(0, 0, 0, 0.07);
+
+  min-height: 100vh;
+  background: var(--eq-bg);
+  color: var(--eq-text);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+/* DARK MODE */
+
+html[data-theme="dark"] .equipment-page {
+  --eq-bg: #10150f;
+  --eq-card: #1c241a;
+  --eq-text: #f2f5ed;
+  --eq-muted: #aab4a2;
+  --eq-border: #35402f;
+  --eq-input: #222c20;
+  --eq-input-text: #f2f5ed;
+  --eq-banner: #192219;
+  --eq-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* =====================================
+   NAVBAR
+===================================== */
+
+.equipment-nav {
+  min-height: 78px;
+  padding: 0 7%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+
+  background: var(--nav-background, var(--eq-card));
+  color: var(--eq-text);
+  border-bottom: 1px solid var(--eq-border);
+
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.equipment-nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--eq-text) !important;
+  font-size: 25px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+
+.equipment-nav .brand-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #c9f269;
+  color: #151811 !important;
+  font-size: 22px;
+}
+
+.equipment-nav .brand-dot {
+  color: #91ba38 !important;
+}
+
+.equipment-nav > div {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.equipment-nav > div a {
+  color: var(--eq-text) !important;
+  transition: color 0.2s ease;
+}
+
+.equipment-nav > div a:hover {
+  color: #91ba38 !important;
+}
+
+/* =====================================
+   BANNER
+===================================== */
+
+.equipment-banner {
+  padding: 85px 7%;
+  background: var(--eq-banner);
+  color: #f5f7f2;
+}
+
+.equipment-banner > span {
+  color: #c9f269;
+  font-size: 11px;
+  letter-spacing: 2px;
+  font-weight: 800;
+}
+
+.equipment-banner h1 {
+  color: #f5f7f2;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(35px, 5vw, 58px);
+  letter-spacing: -2px;
+  line-height: 1.15;
+  margin: 20px 0;
+}
+
+.equipment-banner p {
+  color: #b8c2b0;
+  line-height: 1.8;
+  font-size: 16px;
+}
+
+/* =====================================
+   EQUIPMENT CONTAINER
+===================================== */
+
+.equipment-container {
+  padding: 55px 7%;
+  background: var(--eq-bg);
+  color: var(--eq-text);
+}
+
+/* =====================================
+   SEARCH + FILTERS
+===================================== */
+
+.equipment-toolbar {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 45px;
+}
+
+.equipment-toolbar input,
+.equipment-toolbar select {
+  width: 100%;
+  min-width: 0;
+  padding: 17px;
+  border: 1px solid var(--eq-border);
+  background: var(--eq-input);
+  color: var(--eq-input-text);
+  border-radius: 9px;
+  outline: none;
+  font: inherit;
+  font-size: 14px;
+}
+
+.equipment-toolbar input::placeholder {
+  color: var(--eq-muted);
+  opacity: 1;
+}
+
+.equipment-toolbar select option {
+  background: var(--eq-card);
+  color: var(--eq-text);
+}
+
+.equipment-toolbar input:focus,
+.equipment-toolbar select:focus {
+  border-color: #9cbd4c;
+  box-shadow: 0 0 0 3px rgba(201, 242, 105, 0.12);
+}
+
+/* =====================================
+   RESULT HEADING
+===================================== */
+
+.equipment-result-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.equipment-result-heading h2 {
+  color: var(--eq-text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 25px;
+}
+
+.equipment-result-heading span {
+  color: var(--eq-muted);
+  font-size: 13px;
+}
+
+/* =====================================
+   EQUIPMENT GRID
+===================================== */
+
+.equipment-list-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+.listing-card {
+  min-width: 0;
+  background: var(--eq-card);
+  color: var(--eq-text);
+  border: 1px solid var(--eq-border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.listing-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--eq-shadow);
+}
+
+.listing-image {
+  height: 215px;
+  position: relative;
+  background: var(--eq-border);
+}
+
+.listing-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.listing-image > span {
+  position: absolute;
+  top: 13px;
+  left: 13px;
+  padding: 7px 10px;
+  background: #c9f269;
+  color: #151811;
+  font-size: 9px;
+  font-weight: 800;
+  border-radius: 4px;
+}
+
+/* =====================================
+   LISTING CONTENT
+===================================== */
+
+.listing-content {
+  padding: 20px;
+}
+
+.listing-content > small {
+  color: #91ad4b;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.listing-content h3 {
+  color: var(--eq-text);
+  font-size: 18px;
+  margin: 10px 0;
+}
+
+.listing-content > p {
+  color: var(--eq-muted);
+  font-size: 12px;
+}
+
+.listing-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid var(--eq-border);
+  padding-top: 17px;
+  margin-top: 18px;
+  gap: 10px;
+}
+
+.listing-bottom strong {
+  color: var(--eq-text);
+  font-size: 18px;
+}
+
+.listing-bottom small {
+  color: var(--eq-muted);
+  font-size: 10px;
+}
+
+.listing-bottom a {
+  background: #c9f269;
+  color: #151811 !important;
+  padding: 10px 12px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* =====================================
+   LOADING / ERROR / EMPTY
+===================================== */
+
+.equipment-message {
+  padding: 35px;
+  background: var(--eq-card);
+  color: var(--eq-text);
+  border: 1px solid var(--eq-border);
+  border-radius: 8px;
+  text-align: center;
+  margin-bottom: 25px;
+}
+
+.equipment-message p {
+  color: var(--eq-muted);
+}
+
+.error-message {
+  color: #e16a61;
+}
+
+/* =====================================
+   TABLET
+===================================== */
+
+@media (max-width: 900px) {
+  .equipment-nav {
+    padding: 0 5%;
+  }
+
+  .equipment-banner,
+  .equipment-container {
+    padding-left: 5%;
+    padding-right: 5%;
+  }
+
+  .equipment-list-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .equipment-toolbar {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .equipment-toolbar input {
+    grid-column: 1 / -1;
+  }
+}
+
+/* =====================================
+   MOBILE
+===================================== */
+
+@media (max-width: 550px) {
+  .equipment-nav {
+    min-height: 68px;
+    padding: 0 5%;
+  }
+
+  .equipment-nav .brand {
+    font-size: 22px;
+  }
+
+  .equipment-nav .brand-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 20px;
+  }
+
+  .equipment-nav > div {
+    gap: 12px;
+    font-size: 11px;
+  }
+
+  .equipment-banner {
+    padding: 55px 5%;
+  }
+
+  .equipment-banner h1 {
+    font-size: 38px;
+    letter-spacing: -1.5px;
+  }
+
+  .equipment-banner p {
+    font-size: 14px;
+  }
+
+  .equipment-container {
+    padding: 40px 5%;
+  }
+
+  .equipment-toolbar {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .equipment-toolbar input {
+    grid-column: auto;
+  }
+
+  .equipment-result-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .equipment-result-heading h2 {
+    font-size: 22px;
+  }
+
+  .equipment-list-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .listing-image {
+    height: 230px;
+  }
+}
+
+@media (max-width: 360px) {
+  .equipment-nav > div {
+    gap: 8px;
+    font-size: 10px;
+  }
+
+  .equipment-nav .brand {
+    font-size: 19px;
+  }
+
+  .listing-bottom {
+    flex-wrap: wrap;
+  }
+}

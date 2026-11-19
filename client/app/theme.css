@@ -1,0 +1,320 @@
+
+/* ======================================
+   EQUIPORA - GLOBAL THEME SYSTEM
+====================================== */
+
+:root {
+  color-scheme: light;
+
+  --background: #ffffff;
+  --foreground: #171a14;
+
+  --surface: #f7f8f3;
+  --surface-card: #ffffff;
+
+  --border: #e5e9df;
+  --muted: #6e7568;
+
+  --accent: #c9f269;
+  --accent-text: #151811;
+
+  --nav-background: #ffffff;
+
+  --input-background: #ffffff;
+  --input-text: #171a14;
+
+  --shadow: 0 10px 35px rgba(0, 0, 0, 0.07);
+
+  /* Existing page.css compatibility */
+  --green: #c9f269;
+  --dark: #151811;
+  --light: #f7f8f3;
+}
+
+/* ======================================
+   DARK MODE
+====================================== */
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --background: #111811;
+  --foreground: #f5f7f2;
+
+  --surface: #192219;
+  --surface-card: #202b20;
+
+  --border: #354235;
+  --muted: #a8b3a5;
+
+  --accent: #c9f269;
+  --accent-text: #151811;
+
+  --nav-background: #151f16;
+
+  --input-background: #202b20;
+  --input-text: #f5f7f2;
+
+  --shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+
+  --green: #c9f269;
+  --dark: #f5f7f2;
+  --light: #192219;
+}
+
+/* ======================================
+   GLOBAL
+====================================== */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 90px;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+body,
+main,
+section,
+footer,
+header {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+a {
+  color: inherit;
+}
+
+/* ======================================
+   NAVBAR
+====================================== */
+
+.navbar {
+  background: var(--nav-background) !important;
+  color: var(--foreground) !important;
+  border-bottom: 1px solid var(--border) !important;
+}
+
+.navbar a,
+.navbar .brand,
+.navbar .nav-links a,
+.navbar .login-link {
+  color: var(--foreground) !important;
+}
+
+.navbar .brand-dot {
+  color: #91ba38 !important;
+}
+
+.navbar .signup-btn {
+  background: var(--accent) !important;
+  color: #151811 !important;
+}
+
+.navbar .theme-toggle {
+  background: var(--surface-card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+.navbar .hamburger {
+  background: var(--surface-card) !important;
+  border-color: var(--border) !important;
+}
+
+.navbar .hamburger span {
+  background: var(--foreground) !important;
+}
+
+/* Mobile dropdown */
+.navbar .nav-links.menu-open {
+  background: var(--surface-card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.navbar .nav-links.menu-open a {
+  color: var(--foreground) !important;
+}
+
+/* ======================================
+   INPUTS AND FORMS
+====================================== */
+
+input,
+textarea,
+select {
+  background: var(--input-background);
+  color: var(--input-text);
+  border-color: var(--border);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+}
+
+/* ======================================
+   CARDS AND SURFACES
+====================================== */
+
+.equipment-card,
+.category-card,
+.floating-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+.category-card p,
+.equipment-info p,
+.section-description {
+  color: var(--muted);
+}
+
+/* ======================================
+   DARK MODE PAGE COLORS
+====================================== */
+
+:root[data-theme="dark"] .hero,
+:root[data-theme="dark"] .equipment-section {
+  background: var(--surface);
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .category-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .category-card:hover {
+  background: var(--surface);
+}
+
+:root[data-theme="dark"] .equipment-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .floating-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .secondary-btn {
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .trust-strip {
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .equipment-bottom {
+  border-color: var(--border);
+}
+
+:root[data-theme="dark"] .footer {
+  background: var(--background);
+  color: var(--foreground);
+  border-color: var(--border);
+}
+
+/* ======================================
+   DARK MODE TEXT FIX
+====================================== */
+
+:root[data-theme="dark"] .hero h1,
+:root[data-theme="dark"] .section-heading h2,
+:root[data-theme="dark"] .equipment-info h3,
+:root[data-theme="dark"] .category-card h3,
+:root[data-theme="dark"] .hero-stats strong {
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] .hero-content > p,
+:root[data-theme="dark"] .why-content > p,
+:root[data-theme="dark"] .category-card p,
+:root[data-theme="dark"] .hero-stats span,
+:root[data-theme="dark"] .section-description {
+  color: var(--muted);
+}
+
+/* ======================================
+   BUTTONS
+====================================== */
+
+.primary-btn,
+.signup-btn,
+.rent-btn {
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.primary-btn:hover,
+.signup-btn:hover,
+.rent-btn:hover {
+  background: #b7e653;
+}
+
+/* ======================================
+   THEME TRANSITION
+====================================== */
+
+button,
+a,
+input,
+textarea,
+select {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* =====================================
+   FIX NAVBAR TEXT IN DARK MODE
+===================================== */
+
+html[data-theme="dark"] body .navbar,
+html[data-theme="dark"] body .navbar * {
+  color: #f5f7f2 !important;
+  -webkit-text-fill-color: #f5f7f2;
+}
+
+/* Logo icon */
+html[data-theme="dark"] body .navbar .brand-icon {
+  background: #c9f269 !important;
+  color: #151811 !important;
+  -webkit-text-fill-color: #151811 !important;
+}
+
+/* Logo dot */
+html[data-theme="dark"] body .navbar .brand-dot {
+  color: #c9f269 !important;
+  -webkit-text-fill-color: #c9f269 !important;
+}
+
+/* Get Started button */
+html[data-theme="dark"] body .navbar .signup-btn {
+  background: #c9f269 !important;
+  color: #151811 !important;
+  -webkit-text-fill-color: #151811 !important;
+}
+
+/* Theme toggle */
+html[data-theme="dark"] body .navbar .theme-toggle {
+  background: #202b20 !important;
+  color: #f5f7f2 !important;
+  -webkit-text-fill-color: #f5f7f2 !important;
+}

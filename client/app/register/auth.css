@@ -1,0 +1,19 @@
+
+@import "../login/auth.css";
+
+.auth-success {
+  background: #f0f8df;
+  color: #527820;
+  border: 1px solid #d5e9ad;
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 15px;
+  font-size: 12px;
+}
+
+.password-hint {
+  color: #85877d;
+  font-size: 10px;
+  line-height: 1.6;
+  margin-top: 8px;
+}

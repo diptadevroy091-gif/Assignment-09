@@ -15,6 +15,7 @@ const createBooking = async (req, res) => {
       notes,
     } = req.body;
 
+    // Validate required fields
     if (
       !equipmentId ||
       !startDate ||
@@ -29,6 +30,7 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Find approved equipment
     const equipment = await Equipment.findOne({
       _id: equipmentId,
       status: "Approved",
@@ -45,6 +47,7 @@ const createBooking = async (req, res) => {
     const end = new Date(endDate);
     const requestedQuantity = Number(quantity);
 
+    // Validate dates
     if (
       Number.isNaN(start.getTime()) ||
       Number.isNaN(end.getTime()) ||
@@ -56,6 +59,7 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Validate quantity
     if (
       !Number.isInteger(requestedQuantity) ||
       requestedQuantity < 1 ||
@@ -67,6 +71,7 @@ const createBooking = async (req, res) => {
       });
     }
 
+    // Calculate rental duration
     const duration = Math.ceil(
       (end - start) / (1000 * 60 * 60 * 24)
     );
@@ -79,9 +84,11 @@ const createBooking = async (req, res) => {
       rentalUnits = Math.ceil(duration / 30);
     }
 
+    // Calculate total rental amount
     const totalAmount =
       equipment.rentalPrice * rentalUnits * requestedQuantity;
 
+    // Create pending booking
     const booking = await Booking.create({
       equipmentId,
       customerInfo: {
@@ -97,11 +104,13 @@ const createBooking = async (req, res) => {
       deliveryAddress,
       notes: notes || "",
       totalAmount,
+      paymentStatus: "Pending",
+      bookingStatus: "Pending",
     });
 
     res.status(201).json({
       success: true,
-      message: "Booking created successfully!",
+      message: "Booking created. Please complete payment!",
       data: booking,
     });
   } catch (error) {

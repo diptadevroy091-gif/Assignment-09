@@ -25,7 +25,6 @@
 
   --shadow: 0 10px 35px rgba(0, 0, 0, 0.07);
 
-  /* Existing page.css compatibility */
   --green: #c9f269;
   --dark: #151811;
   --light: #f7f8f3;
@@ -63,7 +62,7 @@
 }
 
 /* ======================================
-   GLOBAL
+   GLOBAL STYLES
 ====================================== */
 
 html {
@@ -74,7 +73,10 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  transition: background 0.25s ease, color 0.25s ease;
+
+  transition:
+    background 0.25s ease,
+    color 0.25s ease;
 }
 
 body,
@@ -92,6 +94,17 @@ a {
   color: inherit;
 }
 
+button,
+a,
+input,
+textarea,
+select {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
 /* ======================================
    NAVBAR
 ====================================== */
@@ -107,15 +120,18 @@ a {
 .navbar .nav-links a,
 .navbar .login-link {
   color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground);
 }
 
 .navbar .brand-dot {
   color: #91ba38 !important;
+  -webkit-text-fill-color: #91ba38 !important;
 }
 
 .navbar .signup-btn {
   background: var(--accent) !important;
-  color: #151811 !important;
+  color: var(--accent-text) !important;
+  -webkit-text-fill-color: var(--accent-text) !important;
 }
 
 .navbar .theme-toggle {
@@ -133,7 +149,10 @@ a {
   background: var(--foreground) !important;
 }
 
-/* Mobile dropdown */
+/* ======================================
+   NAVIGATION MENU COLORS
+====================================== */
+
 .navbar .nav-links.menu-open {
   background: var(--surface-card) !important;
   color: var(--foreground) !important;
@@ -141,8 +160,150 @@ a {
   box-shadow: var(--shadow) !important;
 }
 
-.navbar .nav-links.menu-open a {
+.navbar .nav-links.menu-open > a {
   color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+/* ======================================
+   ACCOUNT MENU
+====================================== */
+
+.navbar .account-menu {
+  position: relative;
+  min-width: 0;
+}
+
+.navbar .account-trigger {
+  max-width: 100%;
+
+  background: var(--surface-card) !important;
+  color: var(--foreground) !important;
+
+  border: 1px solid var(--border) !important;
+
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+.navbar .account-trigger:hover {
+  background: var(--surface) !important;
+}
+
+.navbar .account-trigger * {
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+.navbar .account-trigger img {
+  flex-shrink: 0;
+}
+
+/* ======================================
+   ACCOUNT DROPDOWN COMMON
+====================================== */
+
+.navbar .account-dropdown {
+  box-sizing: border-box;
+  overflow: hidden;
+
+  background: var(--surface-card) !important;
+  color: var(--foreground) !important;
+
+  border: 1px solid var(--border) !important;
+  border-radius: 14px;
+
+  box-shadow: var(--shadow) !important;
+
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+.navbar .account-dropdown-header {
+  background: var(--surface-card) !important;
+  border-color: var(--border) !important;
+}
+
+.navbar .account-dropdown-name {
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+.navbar .account-dropdown-email {
+  color: var(--muted) !important;
+  -webkit-text-fill-color: var(--muted) !important;
+}
+
+.navbar .account-dropdown-role {
+  background: var(--accent) !important;
+  color: var(--accent-text) !important;
+  -webkit-text-fill-color: var(--accent-text) !important;
+}
+
+.navbar .account-dropdown-links {
+  background: var(--surface-card) !important;
+}
+
+.navbar .account-dropdown-link {
+  display: block;
+  width: 100%;
+
+  color: var(--foreground) !important;
+  -webkit-text-fill-color: var(--foreground) !important;
+}
+
+.navbar .account-dropdown-link:hover {
+  background: var(--surface) !important;
+}
+
+.navbar .account-dropdown-logout {
+  color: #dc2626 !important;
+  -webkit-text-fill-color: #dc2626 !important;
+}
+
+.navbar .account-dropdown-logout:hover {
+  background: #fee2e2 !important;
+}
+
+:root[data-theme="dark"] .navbar .account-dropdown-logout:hover {
+  background: #451a1a !important;
+}
+
+/* ======================================
+   DESKTOP PROFILE DROPDOWN
+====================================== */
+
+@media (min-width: 901px) {
+  .navbar .account-menu-desktop {
+    position: relative !important;
+    display: block !important;
+  }
+
+  .navbar .account-menu-desktop .account-dropdown {
+    position: fixed !important;
+
+    top: 90px !important;
+    right: 20px !important;
+    left: auto !important;
+
+    width: 260px !important;
+    max-width: calc(100vw - 40px) !important;
+
+    max-height: calc(100vh - 110px) !important;
+    overflow-y: auto !important;
+
+    z-index: 999999 !important;
+  }
+
+  .navbar .mobile-menu-actions {
+    display: none !important;
+  }
+
+  .navbar .mobile-profile-option {
+    display: none !important;
+  }
+
+  .navbar > .nav-actions {
+    display: flex !important;
+  }
 }
 
 /* ======================================
@@ -231,7 +392,7 @@ textarea::placeholder {
 }
 
 /* ======================================
-   DARK MODE TEXT FIX
+   DARK MODE TEXT
 ====================================== */
 
 :root[data-theme="dark"] .hero h1,
@@ -268,53 +429,197 @@ textarea::placeholder {
 }
 
 /* ======================================
-   THEME TRANSITION
+   MOBILE AND TABLET NAVBAR
 ====================================== */
 
-button,
-a,
-input,
-textarea,
-select {
-  transition:
-    background-color 0.25s ease,
-    color 0.25s ease,
-    border-color 0.25s ease;
+@media (max-width: 900px) {
+  .navbar {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 99999 !important;
+    overflow: visible !important;
+  }
+
+  .navbar > .nav-actions {
+    display: none !important;
+  }
+
+  /* Compact mobile menu */
+
+  .navbar > .nav-links {
+    width: min(260px, calc(100vw - 24px)) !important;
+    max-width: 260px !important;
+
+    max-height: calc(100vh - 95px) !important;
+    max-height: calc(100dvh - 95px) !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    padding: 10px !important;
+    gap: 2px !important;
+
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .navbar > .nav-links.menu-open {
+    display: flex !important;
+  }
+
+  /* Navigation links */
+
+  .navbar > .nav-links > a {
+    display: block !important;
+    width: 100% !important;
+
+    min-height: 38px !important;
+    padding: 9px 10px !important;
+
+    font-size: 13px !important;
+    text-align: left !important;
+
+    border-bottom: 1px solid var(--border);
+    border-radius: 7px;
+  }
+
+  /* Mobile profile position */
+
+  .navbar .mobile-profile-option {
+    display: block !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    padding: 3px 5px !important;
+  }
+
+  .navbar .mobile-profile-option .account-menu {
+    display: block !important;
+    position: relative !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    flex: none !important;
+  }
+
+  /* Profile trigger */
+
+  .navbar .mobile-profile-option .account-trigger {
+    display: flex !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 40px !important;
+
+    padding: 4px 9px !important;
+    gap: 8px !important;
+
+    justify-content: flex-start !important;
+  }
+
+  .navbar .mobile-profile-option .account-trigger img,
+  .navbar .mobile-profile-option .account-trigger > span:first-child {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .navbar .mobile-profile-option .account-trigger > span:nth-child(2) {
+    font-size: 12px !important;
+  }
+
+  /* Mobile profile dropdown */
+
+  .navbar .mobile-profile-option .account-dropdown,
+  .navbar .mobile-profile-option .account-dropdown-mobile {
+    display: block !important;
+
+    position: static !important;
+
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+
+    transform: none !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+
+    margin: 6px 0 0 !important;
+
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+
+    border-radius: 10px !important;
+    z-index: auto !important;
+  }
+
+  /* Smaller profile information */
+
+  .navbar .mobile-profile-option .account-dropdown-header {
+    padding: 9px !important;
+  }
+
+  .navbar .mobile-profile-option .account-dropdown-links {
+    padding: 5px !important;
+  }
+
+  .navbar .mobile-profile-option .account-dropdown-link,
+  .navbar .mobile-profile-option .account-dropdown-logout {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+
+  /* Mobile menu actions */
+
+  .navbar .mobile-menu-actions {
+    display: flex !important;
+
+    flex-direction: column !important;
+    align-items: stretch !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+
+    gap: 7px !important;
+    padding-top: 7px !important;
+  }
+
+  .navbar .mobile-menu-actions > * {
+    width: 100% !important;
+    min-height: 36px !important;
+  }
+
+  .navbar .mobile-menu-actions .theme-toggle {
+    position: static !important;
+    align-self: flex-start !important;
+  }
 }
 
-/* =====================================
-   FIX NAVBAR TEXT IN DARK MODE
-===================================== */
+/* ======================================
+   SMALL MOBILE
+====================================== */
 
-html[data-theme="dark"] body .navbar,
-html[data-theme="dark"] body .navbar * {
-  color: #f5f7f2 !important;
-  -webkit-text-fill-color: #f5f7f2;
-}
+@media (max-width: 480px) {
+  .navbar {
+    padding-left: 5% !important;
+    padding-right: 5% !important;
+  }
 
-/* Logo icon */
-html[data-theme="dark"] body .navbar .brand-icon {
-  background: #c9f269 !important;
-  color: #151811 !important;
-  -webkit-text-fill-color: #151811 !important;
-}
+  .navbar > .nav-links {
+    width: calc(100vw - 24px) !important;
+    max-width: 260px !important;
+  }
 
-/* Logo dot */
-html[data-theme="dark"] body .navbar .brand-dot {
-  color: #c9f269 !important;
-  -webkit-text-fill-color: #c9f269 !important;
-}
+  .navbar .account-trigger {
+    max-width: 100%;
+    gap: 8px;
+  }
 
-/* Get Started button */
-html[data-theme="dark"] body .navbar .signup-btn {
-  background: #c9f269 !important;
-  color: #151811 !important;
-  -webkit-text-fill-color: #151811 !important;
-}
-
-/* Theme toggle */
-html[data-theme="dark"] body .navbar .theme-toggle {
-  background: #202b20 !important;
-  color: #f5f7f2 !important;
-  -webkit-text-fill-color: #f5f7f2 !important;
+  .navbar .account-dropdown {
+    width: 100%;
+    max-width: 100%;
+  }
 }

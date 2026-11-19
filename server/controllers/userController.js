@@ -99,8 +99,90 @@ const updateUserBlockStatus = async (req, res) => {
   }
 };
 
+// Get logged-in user's own profile
+const getMyProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found!",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// Update logged-in user's own profile
+const updateMyProfile = async (req, res) => {
+  try {
+    const allowedFields = ["name", "photoURL", "phone", "address"];
+    const updateData = {};
+
+    allowedFields.forEach((field) => {
+      if (req.body[field] !== undefined) {
+        if (typeof req.body[field] !== "string") {
+          return;
+        }
+
+        updateData[field] = req.body[field].trim();
+      }
+    });
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide valid profile information!",
+      });
+    }
+
+    if (updateData.name !== undefined && !updateData.name) {
+      return res.status(400).json({
+        success: false,
+        message: "Name cannot be empty!",
+      });
+    }
+
+    const user = await User.findById(req.user.id).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Profile not found!",
+      });
+    }
+
+    Object.assign(user, updateData);
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully!",
+      data: user,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   updateUserRole,
   updateUserBlockStatus,
+  getMyProfile,
+  updateMyProfile,
 };

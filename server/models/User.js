@@ -28,6 +28,18 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    // Google OAuth ID
+    googleId: {
+      type: String,
+      default: "",
+    },
+
+    // GitHub OAuth ID
+    githubId: {
+      type: String,
+      default: "",
+    },
+
     role: {
       type: String,
       enum: ["Customer", "Owner", "Admin"],

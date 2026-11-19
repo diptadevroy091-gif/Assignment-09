@@ -5,6 +5,8 @@ require("dotenv").config();
 
 const connectDB = require("./config/db");
 
+const { passport } = require("./config/passport");
+
 const equipmentRoutes = require("./routes/equipmentRoutes");
 const authRoutes = require("./routes/authRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -14,16 +16,23 @@ const webhookRoutes = require("./routes/webhookRoutes");
 
 const app = express();
 
-// Middleware
+// CORS Middleware
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
   })
 );
 
-// Stripe webhook must receive raw body
-app.use("/api/webhooks/stripe", express.raw({ type: "application/json" }));
+// Stripe Webhook - Raw Body
+app.use(
+  "/api/webhooks/stripe",
+  express.raw({ type: "application/json" })
+);
 
+// Passport Middleware
+app.use(passport.initialize());
+
+// JSON Middleware
 app.use(express.json());
 
 // Test API

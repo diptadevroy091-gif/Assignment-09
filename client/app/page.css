@@ -10,6 +10,11 @@
   --dark: #151811;
   --muted: #73766d;
   --light: #f7f8f3;
+
+  /* Light theme review card variables */
+  --card-bg: var(--surface-card, #ffffff);
+  --text-secondary: var(--muted, #73766d);
+  --border-color: var(--border, #e5e7eb);
 }
 
 :root[data-theme="dark"] {
@@ -17,6 +22,11 @@
   --dark: #f5f7f2;
   --muted: #a8b3a5;
   --light: #192219;
+
+  /* Dark theme review card variables */
+  --card-bg: var(--surface-card, #202a20);
+  --text-secondary: var(--muted, #a8b3a5);
+  --border-color: var(--border, #344034);
 }
 
 * {
@@ -133,8 +143,6 @@ main {
   font-weight: 600;
 }
 
-/* Theme toggle */
-
 .theme-toggle {
   position: static !important;
   display: inline-flex !important;
@@ -172,8 +180,6 @@ main {
 .primary-btn:hover {
   background: #b7e653;
 }
-
-/* Mobile menu defaults */
 
 .hamburger,
 .mobile-menu-actions {
@@ -629,6 +635,38 @@ main {
 }
 
 /* =====================================
+   CUSTOMER REVIEWS - THEME SUPPORT
+===================================== */
+
+#reviews {
+  background: var(--background);
+  color: var(--foreground);
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+#reviews h2 {
+  color: var(--foreground);
+}
+
+#reviews > div > div {
+  transition: background 0.25s ease, border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+#reviews > div > div > div {
+  color: var(--foreground);
+}
+
+:root[data-theme="dark"] #reviews {
+  background: var(--background);
+  color: #f5f7f2;
+}
+
+:root[data-theme="dark"] #reviews h2 {
+  color: #f5f7f2;
+}
+
+/* =====================================
    CTA
 ===================================== */
 
@@ -813,8 +851,6 @@ main {
     transform: translateY(-8px) rotate(-45deg);
   }
 
-  /* RIGHT SIDE DROPDOWN */
-
   .navbar > .nav-links {
     display: none !important;
     position: absolute !important;
@@ -892,8 +928,6 @@ main {
     border-radius: 8px;
   }
 
-  /* HERO */
-
   .hero {
     grid-template-columns: 1fr;
     gap: 45px;
@@ -915,8 +949,6 @@ main {
   .floating-card {
     left: 15px;
   }
-
-  /* GRIDS */
 
   .category-grid {
     grid-template-columns: repeat(2, 1fr);

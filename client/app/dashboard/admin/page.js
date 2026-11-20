@@ -4,6 +4,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Navbar from "../../components/Navbar";
+import { useToast } from "../../components/ToastProvider";
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
@@ -11,6 +12,7 @@ const API_BASE = (
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [user, setUser] = useState(null);
   const [equipment, setEquipment] = useState([]);
@@ -19,8 +21,6 @@ export default function AdminDashboard() {
   const [bookingLoading, setBookingLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
 
   const styles = {
     page: {
@@ -55,7 +55,6 @@ export default function AdminDashboard() {
     },
   };
 
-  // Fetch all equipment
   const fetchAllEquipment = useCallback(async (token) => {
     if (!token) return;
 
@@ -78,13 +77,12 @@ export default function AdminDashboard() {
 
       setEquipment(result.data || []);
     } catch (err) {
-      setError(err.message || "Could not load equipment.");
+      showToast(err.message || "Could not load equipment.", "error");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
-  // Fetch all bookings
   const fetchAllBookings = useCallback(async (token) => {
     if (!token) return;
 
@@ -107,13 +105,12 @@ export default function AdminDashboard() {
 
       setBookings(result.data || []);
     } catch (err) {
-      setError(err.message || "Could not load bookings.");
+      showToast(err.message || "Could not load bookings.", "error");
     } finally {
       setBookingLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
-  // Admin authentication
   useEffect(() => {
     const token = localStorage.getItem("equipora-token");
     const savedUser = localStorage.getItem("equipora-user");
@@ -145,14 +142,16 @@ export default function AdminDashboard() {
     }
   }, [router, fetchAllEquipment, fetchAllBookings]);
 
-  // Update equipment status
+  // Equipment status update
   const handleStatusUpdate = async (id, status) => {
     const token = localStorage.getItem("equipora-token");
-    if (!token) return router.replace("/login");
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
 
     setUpdatingId(id);
-    setError("");
-    setMessage("");
 
     try {
       const response = await fetch(
@@ -173,37 +172,40 @@ export default function AdminDashboard() {
         throw new Error(result.message || "Could not update status.");
       }
 
-      setMessage(result.message || `Equipment ${status} successfully!`);
+      showToast(
+        result.message || `Equipment ${status} successfully!`,
+        "success"
+      );
+
       await fetchAllEquipment(token);
     } catch (err) {
-      setError(err.message);
+      showToast(err.message || "Equipment update failed.", "error");
     } finally {
       setUpdatingId(null);
     }
   };
 
-  // Delete only unpaid pending bookings
+  // Delete unpaid pending booking
   const handleDeleteBooking = async (booking) => {
     if (
       booking.paymentStatus !== "Pending" ||
       booking.bookingStatus !== "Pending"
     ) {
-      setError("Only unpaid pending bookings can be deleted.");
+      showToast(
+        "Only unpaid pending bookings can be deleted.",
+        "warning"
+      );
       return;
     }
 
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this pending booking?"
-    );
-
-    if (!confirmed) return;
-
     const token = localStorage.getItem("equipora-token");
-    if (!token) return router.replace("/login");
+
+    if (!token) {
+      router.replace("/login");
+      return;
+    }
 
     setDeletingId(booking._id);
-    setError("");
-    setMessage("");
 
     try {
       const response = await fetch(
@@ -222,22 +224,30 @@ export default function AdminDashboard() {
         throw new Error(result.message || "Could not delete booking.");
       }
 
-      setMessage(result.message || "Pending booking deleted successfully!");
+      showToast(
+        result.message || "Pending booking deleted successfully!",
+        "success"
+      );
+
       await fetchAllBookings(token);
     } catch (err) {
-      setError(err.message || "Booking deletion failed.");
+      showToast(err.message || "Booking deletion failed.", "error");
     } finally {
       setDeletingId(null);
     }
   };
 
   const getStatusColor = (status) => {
-    if (status === "Approved" || status === "Paid" || status === "Confirmed") {
+    if (["Approved", "Paid", "Confirmed"].includes(status)) {
       return "#219653";
     }
-    if (status === "Rejected" || status === "Failed" || status === "Cancelled") {
+
+    if (
+      ["Rejected", "Failed", "Cancelled"].includes(status)
+    ) {
       return "#e05252";
     }
+
     return "#d69e22";
   };
 
@@ -338,36 +348,6 @@ export default function AdminDashboard() {
             </div>
           </div>
         </section>
-
-        {/* Global messages */}
-        {message && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "14px",
-              borderRadius: "8px",
-              background: "rgba(33,150,83,0.12)",
-              color: "#219653",
-            }}
-          >
-            {message}
-          </div>
-        )}
-
-        {error && (
-          <div
-            style={{
-              marginTop: "20px",
-              padding: "14px",
-              borderRadius: "8px",
-              background: "rgba(224,82,82,0.12)",
-              color: "#e05252",
-              overflowWrap: "anywhere",
-            }}
-          >
-            {error}
-          </div>
-        )}
 
         {/* Equipment Overview */}
         <section style={{ marginTop: "45px" }}>
@@ -484,7 +464,9 @@ export default function AdminDashboard() {
                         margin: "15px 0",
                       }}
                     >
-                      <p>Price: <strong style={styles.accent}>৳{item.rentalPrice}</strong> / {item.rentalType}</p>
+                      <p>
+                        Price: <strong style={styles.accent}>৳{item.rentalPrice}</strong> / {item.rentalType}
+                      </p>
                       <p style={styles.muted}>Location: {item.location}</p>
                       <p style={styles.muted}>Quantity: {item.availableQuantity}</p>
                       <p style={styles.muted}>Brand: {item.brand} {item.model}</p>
@@ -764,7 +746,7 @@ export default function AdminDashboard() {
                           marginBottom: 0,
                         }}
                       >
-                        <span>Protected Booking — Cannot Delete</span>
+                        Protected Booking — Cannot Delete
                       </p>
                     )}
                   </article>

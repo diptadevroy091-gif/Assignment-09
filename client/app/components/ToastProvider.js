@@ -24,7 +24,6 @@ export function useToast() {
 export default function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
 
-  // Show Toast
   const showToast = useCallback((message, type = "success") => {
     setToast({
       id: Date.now(),
@@ -33,12 +32,10 @@ export default function ToastProvider({ children }) {
     });
   }, []);
 
-  // Close Toast
   const closeToast = useCallback(() => {
     setToast(null);
   }, []);
 
-  // Auto close after 3.5 seconds
   useEffect(() => {
     if (!toast) return;
 
@@ -49,37 +46,35 @@ export default function ToastProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const toastStyles = {
+  const toastConfig = {
     success: {
-      background: "#16a34a",
-      color: "#ffffff",
       icon: "✓",
+      title: "Success",
+      background: "#16a34a",
     },
     error: {
-      background: "#dc2626",
-      color: "#ffffff",
       icon: "✕",
-    },
-    info: {
-      background: "#2563eb",
-      color: "#ffffff",
-      icon: "ⓘ",
+      title: "Error",
+      background: "#dc2626",
     },
     warning: {
-      background: "#eab308",
-      color: "#111111",
-      icon: "⚠",
+      icon: "!",
+      title: "Warning",
+      background: "#d97706",
+    },
+    info: {
+      icon: "i",
+      title: "Information",
+      background: "#2563eb",
     },
   };
 
-  const currentStyle =
-    toastStyles[toast?.type] || toastStyles.success;
+  const current = toastConfig[toast?.type] || toastConfig.success;
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
 
-      {/* GLOBAL TOAST NOTIFICATION */}
       {toast && (
         <div
           key={toast.id}
@@ -87,50 +82,65 @@ export default function ToastProvider({ children }) {
           aria-live="polite"
           style={{
             position: "fixed",
-            top: "calc(env(safe-area-inset-top, 0px) + 100px)",
+            top: "calc(env(safe-area-inset-top, 0px) + 24px)",
             right: "20px",
-            zIndex: 99999,
-            width: "max-content",
-            maxWidth: "min(420px, calc(100vw - 32px))",
-            minWidth: "min(280px, calc(100vw - 32px))",
+            zIndex: 999999,
+            width: "min(390px, calc(100vw - 32px))",
+            padding: "16px",
+            borderRadius: "16px",
             display: "flex",
             alignItems: "center",
-            gap: "12px",
-            padding: "15px 18px",
-            borderRadius: "12px",
-            background: currentStyle.background,
-            color: currentStyle.color,
-            boxShadow: "0 12px 35px rgba(0, 0, 0, 0.30)",
-            fontFamily: "Arial, sans-serif",
+            gap: "13px",
+            background: "var(--surface-card, #ffffff)",
+            color: "var(--foreground, #111111)",
+            border: "1px solid var(--border, #e5e7eb)",
+            boxShadow: "0 15px 45px rgba(0,0,0,0.18)",
+            animation: "equiporaToastIn 0.3s ease-out",
             boxSizing: "border-box",
           }}
         >
-          {/* ICON */}
           <span
             style={{
+              width: "42px",
+              height: "42px",
+              minWidth: "42px",
+              borderRadius: "13px",
+              display: "grid",
+              placeItems: "center",
+              background: current.background,
+              color: "#ffffff",
               fontSize: "21px",
-              fontWeight: "bold",
-              flexShrink: 0,
+              fontWeight: "800",
             }}
           >
-            {currentStyle.icon}
+            {current.icon}
           </span>
 
-          {/* MESSAGE */}
-          <p
-            style={{
-              margin: 0,
-              fontSize: "14px",
-              fontWeight: "600",
-              lineHeight: "1.5",
-              flex: 1,
-              overflowWrap: "anywhere",
-            }}
-          >
-            {toast.message}
-          </p>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p
+              style={{
+                margin: "0 0 3px",
+                fontSize: "13px",
+                fontWeight: "800",
+                letterSpacing: "0.3px",
+              }}
+            >
+              {current.title}
+            </p>
 
-          {/* CLOSE BUTTON */}
+            <p
+              style={{
+                margin: 0,
+                fontSize: "13px",
+                lineHeight: "1.5",
+                color: "var(--muted, #6b7280)",
+                overflowWrap: "anywhere",
+              }}
+            >
+              {toast.message}
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={closeToast}
@@ -138,19 +148,37 @@ export default function ToastProvider({ children }) {
             style={{
               border: "none",
               background: "transparent",
-              color: "inherit",
-              fontSize: "23px",
+              color: "var(--muted, #6b7280)",
+              fontSize: "22px",
               cursor: "pointer",
-              padding: "0 2px",
+              padding: "4px",
               lineHeight: 1,
-              opacity: 0.85,
-              flexShrink: 0,
             }}
           >
             ×
           </button>
         </div>
       )}
+
+      <style jsx global>{`
+        @keyframes equiporaToastIn {
+          from {
+            opacity: 0;
+            transform: translateX(25px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        @media (max-width: 480px) {
+          .equipora-toast {
+            right: 16px;
+            left: 16px;
+          }
+        }
+      `}</style>
     </ToastContext.Provider>
   );
 }

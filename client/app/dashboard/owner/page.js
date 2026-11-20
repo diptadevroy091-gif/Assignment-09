@@ -48,6 +48,7 @@ export default function OwnerDashboard() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   const cardStyle = {
     background: "var(--surface-card, #151515)",
@@ -99,10 +100,7 @@ export default function OwnerDashboard() {
   };
 
   // Fetch owner's equipment
-  const fetchMyEquipment = async (
-    token,
-    showErrorToast = true
-  ) => {
+  const fetchMyEquipment = async (token, showErrorToast = true) => {
     try {
       setLoading(true);
 
@@ -120,9 +118,7 @@ export default function OwnerDashboard() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.message || "Failed to load equipment."
-        );
+        throw new Error(result.message || "Failed to load equipment.");
       }
 
       setEquipment(result.data || []);
@@ -152,11 +148,11 @@ export default function OwnerDashboard() {
       const currentUser = JSON.parse(savedUser);
 
       if (currentUser.role !== "Owner") {
-        if (currentUser.role === "Admin") {
-          router.replace("/dashboard/admin");
-        } else {
-          router.replace("/dashboard/customer");
-        }
+        router.replace(
+          currentUser.role === "Admin"
+            ? "/dashboard/admin"
+            : "/dashboard/customer"
+        );
         return;
       }
 
@@ -185,10 +181,7 @@ export default function OwnerDashboard() {
     setForm(initialForm);
     setShowForm(true);
 
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Open edit form
@@ -202,9 +195,7 @@ export default function OwnerDashboard() {
       location: item.location || "",
       rentalPrice: String(item.rentalPrice ?? ""),
       rentalType: item.rentalType || "Daily",
-      availableQuantity: String(
-        item.availableQuantity ?? ""
-      ),
+      availableQuantity: String(item.availableQuantity ?? ""),
       condition: item.condition || "",
       brand: item.brand || "",
       model: item.model || "",
@@ -213,11 +204,7 @@ export default function OwnerDashboard() {
     });
 
     setShowForm(true);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   // Close form
@@ -242,9 +229,7 @@ export default function OwnerDashboard() {
       const equipmentData = {
         ...form,
         rentalPrice: Number(form.rentalPrice),
-        availableQuantity: Number(
-          form.availableQuantity
-        ),
+        availableQuantity: Number(form.availableQuantity),
       };
 
       const isEditing = Boolean(editingId);
@@ -265,9 +250,7 @@ export default function OwnerDashboard() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.message || "Equipment could not be saved."
-        );
+        throw new Error(result.message || "Equipment could not be saved.");
       }
 
       showToast(
@@ -281,23 +264,22 @@ export default function OwnerDashboard() {
       closeForm();
       await fetchMyEquipment(token, false);
     } catch (err) {
-      showToast(
-        err.message || "Something went wrong.",
-        "error"
-      );
+      showToast(err.message || "Something went wrong.", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Delete equipment
-  const handleDelete = async (item) => {
-    const confirmed = window.confirm(
-      `Are you sure you want to delete "${item.equipmentName}"? This action cannot be undone.`
-    );
+  // Open custom delete confirmation
+  const handleDelete = (item) => {
+    setItemToDelete(item);
+  };
 
-    if (!confirmed) return;
+  // Confirm and delete equipment
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
 
+    const item = itemToDelete;
     setDeletingId(item._id);
 
     try {
@@ -320,9 +302,13 @@ export default function OwnerDashboard() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          result.message || "Equipment could not be deleted."
-        );
+        throw new Error(result.message || "Equipment could not be deleted.");
+      }
+
+      setItemToDelete(null);
+
+      if (editingId === item._id) {
+        closeForm();
       }
 
       showToast(
@@ -330,16 +316,9 @@ export default function OwnerDashboard() {
         "success"
       );
 
-      if (editingId === item._id) {
-        closeForm();
-      }
-
       await fetchMyEquipment(token, false);
     } catch (err) {
-      showToast(
-        err.message || "Something went wrong.",
-        "error"
-      );
+      showToast(err.message || "Something went wrong.", "error");
     } finally {
       setDeletingId(null);
     }
@@ -352,21 +331,23 @@ export default function OwnerDashboard() {
     return "#ffd479";
   };
 
-  // Loading screen
   if (!user) {
     return (
-      <main
-        style={{
-          minHeight: "100vh",
-          background: "var(--background, #080808)",
-          color: "var(--foreground, #fff)",
-          display: "grid",
-          placeItems: "center",
-          fontFamily: "Arial, sans-serif",
-        }}
-      >
-        Loading Owner Dashboard...
-      </main>
+      <>
+        <Navbar />
+        <main
+          style={{
+            minHeight: "100vh",
+            background: "var(--background, #080808)",
+            color: "var(--foreground, #fff)",
+            display: "grid",
+            placeItems: "center",
+            fontFamily: "Arial, sans-serif",
+          }}
+        >
+          Loading Owner Dashboard...
+        </main>
+      </>
     );
   }
 
@@ -379,7 +360,6 @@ export default function OwnerDashboard() {
         fontFamily: "Arial, sans-serif",
       }}
     >
-      {/* SHARED WEBSITE NAVBAR */}
       <Navbar />
 
       <div
@@ -389,7 +369,7 @@ export default function OwnerDashboard() {
           margin: "0 auto",
         }}
       >
-        {/* DASHBOARD INTRODUCTION */}
+        {/* Dashboard Introduction */}
         <section style={{ marginTop: "20px" }}>
           <p
             style={{
@@ -410,54 +390,38 @@ export default function OwnerDashboard() {
             Welcome, {user.name || "Owner"}!
           </h1>
 
-          <p
-            style={{
-              color: "var(--muted, #999)",
-              lineHeight: 1.7,
-            }}
-          >
-            Manage your equipment rental business from your
-            dashboard.
+          <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
+            Manage your equipment rental business from your dashboard.
           </p>
 
-          {/* ACCOUNT INFORMATION */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(220px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
               gap: "20px",
               marginTop: "30px",
             }}
           >
             <div style={cardStyle}>
-              <p style={{ color: "var(--muted, #999)" }}>
-                Account Type
-              </p>
+              <p style={{ color: "var(--muted, #999)" }}>Account Type</p>
               <h2 style={{ color: "var(--accent, #c9f269)" }}>
                 Equipment Owner
               </h2>
             </div>
 
             <div style={cardStyle}>
-              <p style={{ color: "var(--muted, #999)" }}>
-                Owner Name
-              </p>
+              <p style={{ color: "var(--muted, #999)" }}>Owner Name</p>
               <h2>{user.name || "Owner"}</h2>
             </div>
 
             <div style={cardStyle}>
-              <p style={{ color: "var(--muted, #999)" }}>
-                Owner Email
-              </p>
-              <h3 style={{ overflowWrap: "anywhere" }}>
-                {user.email}
-              </h3>
+              <p style={{ color: "var(--muted, #999)" }}>Owner Email</p>
+              <h3 style={{ overflowWrap: "anywhere" }}>{user.email}</h3>
             </div>
           </div>
         </section>
 
-        {/* EQUIPMENT MANAGEMENT */}
+        {/* Equipment Management */}
         <section style={{ marginTop: "45px" }}>
           <div
             style={{
@@ -470,37 +434,19 @@ export default function OwnerDashboard() {
             }}
           >
             <div>
-              <h2
-                style={{
-                  fontSize: "27px",
-                  marginBottom: "8px",
-                }}
-              >
+              <h2 style={{ fontSize: "27px", marginBottom: "8px" }}>
                 My Equipment
               </h2>
 
-              <p
-                style={{
-                  color: "var(--muted, #999)",
-                  margin: 0,
-                }}
-              >
+              <p style={{ color: "var(--muted, #999)", margin: 0 }}>
                 Manage the equipment you have submitted.
               </p>
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: "10px",
-                flexWrap: "wrap",
-              }}
-            >
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={() =>
-                  fetchMyEquipment(
-                    localStorage.getItem("equipora-token")
-                  )
+                  fetchMyEquipment(localStorage.getItem("equipora-token"))
                 }
                 style={secondaryButtonStyle}
                 disabled={loading}
@@ -509,9 +455,7 @@ export default function OwnerDashboard() {
               </button>
 
               <button
-                onClick={
-                  showForm ? closeForm : openAddForm
-                }
+                onClick={showForm ? closeForm : openAddForm}
                 style={buttonStyle}
               >
                 {showForm ? "Close Form" : "+ Add Equipment"}
@@ -519,35 +463,17 @@ export default function OwnerDashboard() {
             </div>
           </div>
 
-          {/* ADD / EDIT FORM */}
+          {/* Add / Edit Form */}
           {showForm && (
-            <div
-              style={{
-                ...cardStyle,
-                marginBottom: "30px",
-              }}
-            >
-              <h2
-                style={{
-                  marginTop: 0,
-                  marginBottom: "25px",
-                }}
-              >
-                {editingId
-                  ? "Edit Equipment"
-                  : "Add New Equipment"}
+            <div style={{ ...cardStyle, marginBottom: "30px" }}>
+              <h2 style={{ marginTop: 0, marginBottom: "25px" }}>
+                {editingId ? "Edit Equipment" : "Add New Equipment"}
               </h2>
 
               {editingId && (
-                <p
-                  style={{
-                    color: "#ffd479",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  Note: After editing, this equipment will
-                  return to Pending status and require admin
-                  approval again.
+                <p style={{ color: "#ffd479", lineHeight: 1.6 }}>
+                  Note: After editing, this equipment will return to Pending
+                  status and require admin approval again.
                 </p>
               )}
 
@@ -555,15 +481,12 @@ export default function OwnerDashboard() {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns:
-                      "repeat(auto-fit, minmax(220px, 1fr))",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
                     gap: "20px",
                   }}
                 >
                   <div>
-                    <label style={labelStyle}>
-                      Equipment Name *
-                    </label>
+                    <label style={labelStyle}>Equipment Name *</label>
                     <input
                       style={inputStyle}
                       name="equipmentName"
@@ -575,9 +498,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Category *
-                    </label>
+                    <label style={labelStyle}>Category *</label>
                     <select
                       style={inputStyle}
                       name="category"
@@ -585,14 +506,9 @@ export default function OwnerDashboard() {
                       onChange={handleChange}
                       required
                     >
-                      <option value="">
-                        Select Category
-                      </option>
+                      <option value="">Select Category</option>
                       {categories.map((category) => (
-                        <option
-                          key={category}
-                          value={category}
-                        >
+                        <option key={category} value={category}>
                           {category}
                         </option>
                       ))}
@@ -624,9 +540,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Location *
-                    </label>
+                    <label style={labelStyle}>Location *</label>
                     <input
                       style={inputStyle}
                       name="location"
@@ -638,9 +552,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Rental Price *
-                    </label>
+                    <label style={labelStyle}>Rental Price *</label>
                     <input
                       style={inputStyle}
                       type="number"
@@ -654,9 +566,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Rental Type *
-                    </label>
+                    <label style={labelStyle}>Rental Type *</label>
                     <select
                       style={inputStyle}
                       name="rentalType"
@@ -671,9 +581,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Available Quantity *
-                    </label>
+                    <label style={labelStyle}>Available Quantity *</label>
                     <input
                       style={inputStyle}
                       type="number"
@@ -687,9 +595,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Condition *
-                    </label>
+                    <label style={labelStyle}>Condition *</label>
                     <input
                       style={inputStyle}
                       name="condition"
@@ -701,9 +607,7 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>
-                      Image URL *
-                    </label>
+                    <label style={labelStyle}>Image URL *</label>
                     <input
                       style={inputStyle}
                       type="url"
@@ -717,15 +621,9 @@ export default function OwnerDashboard() {
                 </div>
 
                 <div style={{ marginTop: "20px" }}>
-                  <label style={labelStyle}>
-                    Description *
-                  </label>
+                  <label style={labelStyle}>Description *</label>
                   <textarea
-                    style={{
-                      ...inputStyle,
-                      minHeight: "100px",
-                      resize: "vertical",
-                    }}
+                    style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }}
                     name="description"
                     value={form.description}
                     onChange={handleChange}
@@ -735,15 +633,9 @@ export default function OwnerDashboard() {
                 </div>
 
                 <div style={{ marginTop: "20px" }}>
-                  <label style={labelStyle}>
-                    Rental Terms *
-                  </label>
+                  <label style={labelStyle}>Rental Terms *</label>
                   <textarea
-                    style={{
-                      ...inputStyle,
-                      minHeight: "100px",
-                      resize: "vertical",
-                    }}
+                    style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }}
                     name="rentalTerms"
                     value={form.rentalTerms}
                     onChange={handleChange}
@@ -766,9 +658,7 @@ export default function OwnerDashboard() {
                     style={{
                       ...buttonStyle,
                       opacity: submitting ? 0.6 : 1,
-                      cursor: submitting
-                        ? "not-allowed"
-                        : "pointer",
+                      cursor: submitting ? "not-allowed" : "pointer",
                     }}
                   >
                     {submitting
@@ -791,7 +681,7 @@ export default function OwnerDashboard() {
             </div>
           )}
 
-          {/* EQUIPMENT LIST */}
+          {/* Equipment List */}
           {loading ? (
             <div style={cardStyle}>
               <p style={{ color: "var(--accent, #c9f269)" }}>
@@ -807,35 +697,23 @@ export default function OwnerDashboard() {
               }}
             >
               <h3>No Equipment Found</h3>
-
-              <p
-                style={{
-                  color: "var(--muted, #999)",
-                  lineHeight: 1.7,
-                }}
-              >
-                You have not added any equipment yet. Click
-                the Add Equipment button to submit your first
-                item.
+              <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
+                You have not added any equipment yet. Click the Add Equipment
+                button to submit your first item.
               </p>
             </div>
           ) : (
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(250px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
                 gap: "22px",
               }}
             >
               {equipment.map((item) => (
                 <article
                   key={item._id}
-                  style={{
-                    ...cardStyle,
-                    padding: 0,
-                    overflow: "hidden",
-                  }}
+                  style={{ ...cardStyle, padding: 0, overflow: "hidden" }}
                 >
                   {item.imageUrl && (
                     <img
@@ -884,12 +762,7 @@ export default function OwnerDashboard() {
                       </span>
                     </div>
 
-                    <h3
-                      style={{
-                        fontSize: "21px",
-                        marginBottom: "8px",
-                      }}
-                    >
+                    <h3 style={{ fontSize: "21px", marginBottom: "8px" }}>
                       {item.equipmentName}
                     </h3>
 
@@ -910,74 +783,35 @@ export default function OwnerDashboard() {
                         paddingTop: "15px",
                       }}
                     >
-                      <p
-                        style={{
-                          margin: "7px 0",
-                          color: "var(--foreground, #ccc)",
-                        }}
-                      >
-                        <strong
-                          style={{
-                            color: "var(--accent, #c9f269)",
-                          }}
-                        >
+                      <p style={{ margin: "7px 0", color: "var(--foreground, #ccc)" }}>
+                        <strong style={{ color: "var(--accent, #c9f269)" }}>
                           ৳{item.rentalPrice}
                         </strong>{" "}
                         / {item.rentalType}
                       </p>
 
-                      <p
-                        style={{
-                          margin: "7px 0",
-                          color: "var(--muted, #999)",
-                        }}
-                      >
+                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Location: {item.location}
                       </p>
 
-                      <p
-                        style={{
-                          margin: "7px 0",
-                          color: "var(--muted, #999)",
-                        }}
-                      >
+                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Quantity: {item.availableQuantity}
                       </p>
 
-                      <p
-                        style={{
-                          margin: "7px 0",
-                          color: "var(--muted, #999)",
-                        }}
-                      >
+                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Brand: {item.brand} {item.model}
                       </p>
 
-                      <p
-                        style={{
-                          margin: "7px 0",
-                          color: "var(--muted, #999)",
-                        }}
-                      >
+                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Condition: {item.condition}
                       </p>
                     </div>
 
-                    {/* EDIT AND DELETE */}
-                    <div
-                      style={{
-                        display: "flex",
-                        gap: "10px",
-                        marginTop: "20px",
-                      }}
-                    >
+                    {/* Edit and Delete */}
+                    <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
                       <button
                         onClick={() => handleEdit(item)}
-                        style={{
-                          ...buttonStyle,
-                          flex: 1,
-                          padding: "11px",
-                        }}
+                        style={{ ...buttonStyle, flex: 1, padding: "11px" }}
                       >
                         Edit
                       </button>
@@ -993,17 +827,11 @@ export default function OwnerDashboard() {
                           padding: "11px",
                           borderRadius: "8px",
                           fontWeight: "bold",
-                          cursor:
-                            deletingId === item._id
-                              ? "not-allowed"
-                              : "pointer",
-                          opacity:
-                            deletingId === item._id ? 0.6 : 1,
+                          cursor: deletingId === item._id ? "not-allowed" : "pointer",
+                          opacity: deletingId === item._id ? 0.6 : 1,
                         }}
                       >
-                        {deletingId === item._id
-                          ? "Deleting..."
-                          : "Delete"}
+                        {deletingId === item._id ? "Deleting..." : "Delete"}
                       </button>
                     </div>
                   </div>
@@ -1013,6 +841,102 @@ export default function OwnerDashboard() {
           )}
         </section>
       </div>
+
+      {/* CUSTOM DELETE CONFIRMATION */}
+      {itemToDelete && (
+        <div
+          onClick={() => {
+            if (!deletingId) setItemToDelete(null);
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99998,
+            background: "rgba(0,0,0,0.75)",
+            display: "grid",
+            placeItems: "center",
+            padding: "20px",
+            backdropFilter: "blur(5px)",
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%",
+              maxWidth: "420px",
+              padding: "28px",
+              borderRadius: "18px",
+              background: "var(--surface-card, #151515)",
+              color: "var(--foreground, #fff)",
+              border: "1px solid var(--border, #333)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+            }}
+          >
+            <div
+              style={{
+                width: "48px",
+                height: "48px",
+                borderRadius: "14px",
+                background: "rgba(224,82,82,0.15)",
+                color: "#ef6464",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "24px",
+                fontWeight: "bold",
+                marginBottom: "18px",
+              }}
+            >
+              !
+            </div>
+
+            <h2 style={{ margin: "0 0 12px", fontSize: "23px" }}>
+              Delete Equipment?
+            </h2>
+
+            <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
+              Are you sure you want to delete{" "}
+              <strong style={{ color: "var(--foreground, #fff)" }}>
+                {itemToDelete.equipmentName}
+              </strong>
+              ? This action cannot be undone.
+            </p>
+
+            <div style={{ display: "flex", gap: "12px", marginTop: "25px" }}>
+              <button
+                type="button"
+                disabled={Boolean(deletingId)}
+                onClick={() => setItemToDelete(null)}
+                style={{
+                  ...secondaryButtonStyle,
+                  flex: 1,
+                  opacity: deletingId ? 0.5 : 1,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={Boolean(deletingId)}
+                onClick={confirmDelete}
+                style={{
+                  flex: 1,
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: "8px",
+                  padding: "11px",
+                  fontWeight: "bold",
+                  cursor: deletingId ? "not-allowed" : "pointer",
+                  opacity: deletingId ? 0.6 : 1,
+                }}
+              >
+                {deletingId ? "Deleting..." : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

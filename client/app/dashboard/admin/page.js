@@ -3,6 +3,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import { useToast } from "../../components/ToastProvider";
 
@@ -52,6 +53,18 @@ export default function AdminDashboard() {
       fontSize: "26px",
       marginBottom: "20px",
       color: "var(--foreground, #ffffff)",
+    },
+    quickLink: {
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
+      background: "var(--accent, #c9f269)",
+      color: "var(--accent-text, #080808)",
+      padding: "12px 18px",
+      borderRadius: "9px",
+      fontWeight: "bold",
+      textDecoration: "none",
+      transition: "0.2s ease",
     },
   };
 
@@ -242,9 +255,7 @@ export default function AdminDashboard() {
       return "#219653";
     }
 
-    if (
-      ["Rejected", "Failed", "Cancelled"].includes(status)
-    ) {
+    if (["Rejected", "Failed", "Cancelled"].includes(status)) {
       return "#e05252";
     }
 
@@ -323,6 +334,28 @@ export default function AdminDashboard() {
           <p style={{ ...styles.muted, lineHeight: 1.7 }}>
             Manage and monitor your Equipora platform from one place.
           </p>
+
+          {/* Admin Quick Actions */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "12px",
+              marginTop: "22px",
+            }}
+          >
+            <Link href="/dashboard/admin/users" style={styles.quickLink}>
+              Manage All Users →
+            </Link>
+
+            <Link href="/dashboard/admin/rentals" style={styles.quickLink}>
+              Manage All Rentals →
+            </Link>
+
+            <Link href="/dashboard/admin/analytics" style={styles.quickLink}>
+              Admin Analytics →
+            </Link>
+          </div>
 
           <div
             style={{

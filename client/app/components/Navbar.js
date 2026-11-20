@@ -54,7 +54,6 @@ function AccountMenu({ user, onLogout }) {
 
   return (
     <div className="equipora-account-menu" ref={menuRef}>
-      {/* PROFILE BUTTON */}
       <button
         type="button"
         className="account-trigger"
@@ -83,7 +82,6 @@ function AccountMenu({ user, onLogout }) {
         </span>
       </button>
 
-      {/* PROFILE DROPDOWN */}
       {open && (
         <div className="account-dropdown">
           <div className="account-dropdown-header">
@@ -101,7 +99,6 @@ function AccountMenu({ user, onLogout }) {
           </div>
 
           <div className="account-dropdown-links">
-            {/* DASHBOARD */}
             <Link
               href={dashboardPath}
               onClick={closeMenu}
@@ -110,7 +107,6 @@ function AccountMenu({ user, onLogout }) {
               📊 My Dashboard
             </Link>
 
-            {/* WISHLIST: CUSTOMER ONLY */}
             {user?.role === "Customer" && (
               <Link
                 href="/wishlist"
@@ -121,7 +117,6 @@ function AccountMenu({ user, onLogout }) {
               </Link>
             )}
 
-            {/* PROFILE */}
             <Link
               href="/profile"
               onClick={closeMenu}
@@ -130,7 +125,6 @@ function AccountMenu({ user, onLogout }) {
               👤 My Profile
             </Link>
 
-            {/* EDIT PROFILE */}
             <Link
               href="/profile/edit"
               onClick={closeMenu}
@@ -139,7 +133,6 @@ function AccountMenu({ user, onLogout }) {
               ✏️ Edit Profile
             </Link>
 
-            {/* LOGOUT */}
             <button
               type="button"
               className="account-dropdown-logout"
@@ -301,6 +294,12 @@ export default function Navbar() {
   return (
     <nav
       className={`navbar ${isDashboard ? "dashboard-navbar" : ""}`}
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 1000,
+        width: "100%",
+      }}
     >
       {/* BRAND */}
       <Link href="/" className="brand">

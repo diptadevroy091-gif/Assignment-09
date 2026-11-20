@@ -1,7 +1,9 @@
 
 const User = require("../models/User");
 
-// Get all users (Admin only)
+// ======================================
+// GET ALL USERS (ADMIN)
+// ======================================
 const getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
@@ -21,9 +23,19 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-// Update user role (Admin only)
+// ======================================
+// UPDATE USER ROLE (ADMIN)
+// ======================================
 const updateUserRole = async (req, res) => {
   try {
+    // Admin cannot change their own role
+    if (String(req.user.id) === String(req.params.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot change your own Admin role!",
+      });
+    }
+
     const { role } = req.body;
 
     if (!["Customer", "Owner", "Admin"].includes(role)) {
@@ -59,9 +71,19 @@ const updateUserRole = async (req, res) => {
   }
 };
 
-// Block or unblock user (Admin only)
+// ======================================
+// BLOCK / UNBLOCK USER (ADMIN)
+// ======================================
 const updateUserBlockStatus = async (req, res) => {
   try {
+    // Admin cannot block their own account
+    if (String(req.user.id) === String(req.params.id)) {
+      return res.status(403).json({
+        success: false,
+        message: "You cannot block your own Admin account!",
+      });
+    }
+
     const { isBlocked } = req.body;
 
     if (typeof isBlocked !== "boolean") {
@@ -99,7 +121,9 @@ const updateUserBlockStatus = async (req, res) => {
   }
 };
 
-// Get logged-in user's own profile
+// ======================================
+// GET MY PROFILE
+// ======================================
 const getMyProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -123,21 +147,26 @@ const getMyProfile = async (req, res) => {
   }
 };
 
-// Update logged-in user's own profile
+// ======================================
+// UPDATE MY PROFILE
+// ======================================
 const updateMyProfile = async (req, res) => {
   try {
     const allowedFields = ["name", "photoURL", "phone", "address"];
     const updateData = {};
 
-    allowedFields.forEach((field) => {
+    for (const field of allowedFields) {
       if (req.body[field] !== undefined) {
         if (typeof req.body[field] !== "string") {
-          return;
+          return res.status(400).json({
+            success: false,
+            message: `Invalid ${field} value!`,
+          });
         }
 
         updateData[field] = req.body[field].trim();
       }
-    });
+    }
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({
@@ -153,7 +182,7 @@ const updateMyProfile = async (req, res) => {
       });
     }
 
-    const user = await User.findById(req.user.id).select("-password");
+    const user = await User.findById(req.user.id);
 
     if (!user) {
       return res.status(404).json({
@@ -166,10 +195,12 @@ const updateMyProfile = async (req, res) => {
 
     await user.save();
 
+    const safeUser = await User.findById(user._id).select("-password");
+
     res.status(200).json({
       success: true,
       message: "Profile updated successfully!",
-      data: user,
+      data: safeUser,
     });
   } catch (error) {
     res.status(500).json({
@@ -179,6 +210,9 @@ const updateMyProfile = async (req, res) => {
   }
 };
 
+// ======================================
+// EXPORT CONTROLLERS
+// ======================================
 module.exports = {
   getAllUsers,
   updateUserRole,

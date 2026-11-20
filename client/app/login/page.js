@@ -1,16 +1,16 @@
 
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import "./auth.css";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+).replace(/\/+$/, "");
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -59,32 +59,26 @@ export default function LoginPage() {
       }
 
       if (!result.token) {
-        throw new Error("Login successful, but server did not return a token.");
+        throw new Error(
+          "Login successful, but server did not return a token."
+        );
       }
 
-      // Save authentication token
       localStorage.setItem("equipora-token", result.token);
       localStorage.setItem("token", result.token);
 
-      // Save user information
       localStorage.setItem(
         "equipora-user",
         JSON.stringify(result.data)
       );
 
-      // Verify token was saved
-      const savedToken =
-        localStorage.getItem("equipora-token") ||
-        localStorage.getItem("token");
-
-      if (!savedToken) {
-        throw new Error("Unable to save login token. Please try again.");
-      }
-
-      // Return to the page user wanted before login
       const returnTo = searchParams.get("callbackUrl");
 
-      if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+      if (
+        returnTo &&
+        returnTo.startsWith("/") &&
+        !returnTo.startsWith("//")
+      ) {
         router.replace(returnTo);
       } else if (result.data.role === "Admin") {
         router.replace("/dashboard/admin");
@@ -93,7 +87,6 @@ export default function LoginPage() {
       } else {
         router.replace("/dashboard/customer");
       }
-
     } catch (err) {
       setError(err.message || "Something went wrong!");
     } finally {
@@ -189,7 +182,9 @@ export default function LoginPage() {
               className="auth-submit"
               disabled={loading}
             >
-              {loading ? "Signing in..." : "Sign in to your account ↗"}
+              {loading
+                ? "Signing in..."
+                : "Sign in to your account ↗"}
             </button>
           </form>
 
@@ -244,5 +239,21 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="auth-page">
+          <div className="auth-right">
+            <p>Loading login page...</p>
+          </div>
+        </main>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

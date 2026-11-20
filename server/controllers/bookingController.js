@@ -2,6 +2,7 @@
 const Booking = require("../models/Booking");
 const Equipment = require("../models/Equipment");
 const User = require("../models/User");
+const Payment = require("../models/Payment");
 
 // Create new booking (Customer only)
 const createBooking = async (req, res) => {
@@ -16,7 +17,6 @@ const createBooking = async (req, res) => {
       notes,
     } = req.body;
 
-    // Validate required fields
     if (
       !equipmentId ||
       !startDate ||
@@ -31,7 +31,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Validate equipment ID
     if (!/^[0-9a-fA-F]{24}$/.test(equipmentId)) {
       return res.status(400).json({
         success: false,
@@ -39,7 +38,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Find approved equipment
     const equipment = await Equipment.findOne({
       _id: equipmentId,
       status: "Approved",
@@ -52,7 +50,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Find logged-in customer
     const customer = await User.findById(req.user.id);
 
     if (!customer) {
@@ -69,7 +66,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Validate rental dates
     const start = new Date(startDate);
     const end = new Date(endDate);
 
@@ -84,7 +80,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Validate quantity
     const requestedQuantity = Number(quantity);
 
     if (
@@ -98,7 +93,6 @@ const createBooking = async (req, res) => {
       });
     }
 
-    // Calculate rental duration
     const duration = Math.ceil(
       (end - start) / (1000 * 60 * 60 * 24)
     );
@@ -111,13 +105,9 @@ const createBooking = async (req, res) => {
       rentalUnits = Math.ceil(duration / 30);
     }
 
-    // Calculate total rental amount
     const totalAmount =
-      equipment.rentalPrice *
-      rentalUnits *
-      requestedQuantity;
+      equipment.rentalPrice * rentalUnits * requestedQuantity;
 
-    // Create booking
     const booking = await Booking.create({
       equipmentId: equipment._id,
 
@@ -197,8 +187,61 @@ const getAllBookings = async (req, res) => {
   }
 };
 
+// Delete Pending Booking (Admin only)
+const deletePendingBooking = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid booking ID!",
+      });
+    }
+
+    const booking = await Booking.findById(id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: "Booking not found!",
+      });
+    }
+
+    // Never delete paid or confirmed bookings
+    if (
+      booking.paymentStatus !== "Pending" ||
+      booking.bookingStatus !== "Pending"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Only unpaid pending bookings can be deleted!",
+      });
+    }
+
+    // Remove associated pending payment records
+    await Payment.deleteMany({
+      bookingId: booking._id,
+      paymentStatus: "Pending",
+    });
+
+    await Booking.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Pending booking deleted successfully!",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createBooking,
   getMyBookings,
   getAllBookings,
+  deletePendingBooking,
 };

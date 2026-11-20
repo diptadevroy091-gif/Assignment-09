@@ -2,7 +2,9 @@
 const Equipment = require("../models/Equipment");
 const User = require("../models/User");
 
-// Create new equipment (Owner only)
+// ======================================
+// CREATE NEW EQUIPMENT (OWNER ONLY)
+// ======================================
 const createEquipment = async (req, res) => {
   try {
     const owner = await User.findById(req.user.id);
@@ -55,7 +57,9 @@ const createEquipment = async (req, res) => {
   }
 };
 
-// Get owner's own equipment
+// ======================================
+// GET OWNER'S OWN EQUIPMENT
+// ======================================
 const getMyEquipment = async (req, res) => {
   try {
     const equipment = await Equipment.find({
@@ -75,7 +79,9 @@ const getMyEquipment = async (req, res) => {
   }
 };
 
-// Update owner's own equipment
+// ======================================
+// UPDATE OWNER'S OWN EQUIPMENT
+// ======================================
 const updateMyEquipment = async (req, res) => {
   try {
     const allowedFields = [
@@ -122,7 +128,7 @@ const updateMyEquipment = async (req, res) => {
 
     Object.assign(equipment, updateData);
 
-    // Edited equipment needs admin approval again
+    // Edited equipment requires admin approval again
     equipment.status = "Pending";
 
     await equipment.save();
@@ -140,7 +146,9 @@ const updateMyEquipment = async (req, res) => {
   }
 };
 
-// Delete owner's own equipment
+// ======================================
+// DELETE OWNER'S OWN EQUIPMENT
+// ======================================
 const deleteMyEquipment = async (req, res) => {
   try {
     const equipment = await Equipment.findOneAndDelete({
@@ -167,12 +175,117 @@ const deleteMyEquipment = async (req, res) => {
   }
 };
 
-// Get all approved equipment
+// ======================================
+// GET APPROVED EQUIPMENT
+// SERVER-SIDE SEARCH, FILTER & SORT
+// ======================================
 const getApprovedEquipment = async (req, res) => {
   try {
-    const equipment = await Equipment.find({
+    const {
+      search = "",
+      category,
+      rentalType,
+      minPrice,
+      maxPrice,
+      availability,
+      sort = "newest",
+    } = req.query;
+
+    // Only approved equipment will be shown
+    const query = {
       status: "Approved",
-    }).sort({ createdAt: -1 });
+    };
+
+    // Search by equipment name, brand or location
+    if (search.trim()) {
+      const searchRegex = new RegExp(
+        search.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+        "i"
+      );
+
+      query.$or = [
+        { equipmentName: searchRegex },
+        { brand: searchRegex },
+        { location: searchRegex },
+      ];
+    }
+
+    // Category filter
+    if (category && category !== "All") {
+      query.category = category;
+    }
+
+    // Rental type filter
+    if (rentalType && rentalType !== "All") {
+      query.rentalType = rentalType;
+    }
+
+    // Minimum price filter
+    if (minPrice !== undefined && minPrice !== "") {
+      const min = Number(minPrice);
+
+      if (!Number.isFinite(min) || min < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid minimum price!",
+        });
+      }
+
+      query.rentalPrice = {
+        ...query.rentalPrice,
+        $gte: min,
+      };
+    }
+
+    // Maximum price filter
+    if (maxPrice !== undefined && maxPrice !== "") {
+      const max = Number(maxPrice);
+
+      if (!Number.isFinite(max) || max < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid maximum price!",
+        });
+      }
+
+      query.rentalPrice = {
+        ...query.rentalPrice,
+        $lte: max,
+      };
+    }
+
+    if (
+      query.rentalPrice?.$gte !== undefined &&
+      query.rentalPrice?.$lte !== undefined &&
+      query.rentalPrice.$gte > query.rentalPrice.$lte
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Minimum price cannot exceed maximum price!",
+      });
+    }
+
+    // Availability filter
+    if (availability === "available") {
+      query.availableQuantity = { $gt: 0 };
+    } else if (availability === "unavailable") {
+      query.availableQuantity = { $lte: 0 };
+    }
+
+    // Sorting
+    let sortOption = { createdAt: -1 };
+
+    if (sort === "low") {
+      sortOption = { rentalPrice: 1 };
+    } else if (sort === "high") {
+      sortOption = { rentalPrice: -1 };
+    } else if (sort === "oldest") {
+      sortOption = { createdAt: 1 };
+    } else if (sort === "newest") {
+      sortOption = { createdAt: -1 };
+    }
+
+    const equipment = await Equipment.find(query).sort(sortOption);
 
     res.status(200).json({
       success: true,
@@ -187,7 +300,9 @@ const getApprovedEquipment = async (req, res) => {
   }
 };
 
-// Get single equipment by ID
+// ======================================
+// GET SINGLE EQUIPMENT BY ID
+// ======================================
 const getEquipmentById = async (req, res) => {
   try {
     const equipment = await Equipment.findById(req.params.id);
@@ -211,7 +326,9 @@ const getEquipmentById = async (req, res) => {
   }
 };
 
-// Get all equipment for Admin
+// ======================================
+// GET ALL EQUIPMENT FOR ADMIN
+// ======================================
 const getAllEquipment = async (req, res) => {
   try {
     const equipment = await Equipment.find().sort({
@@ -231,7 +348,9 @@ const getAllEquipment = async (req, res) => {
   }
 };
 
-// Update equipment status (Admin only)
+// ======================================
+// UPDATE EQUIPMENT STATUS (ADMIN ONLY)
+// ======================================
 const updateEquipmentStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -269,6 +388,9 @@ const updateEquipmentStatus = async (req, res) => {
   }
 };
 
+// ======================================
+// EXPORT CONTROLLERS
+// ======================================
 module.exports = {
   createEquipment,
   getMyEquipment,

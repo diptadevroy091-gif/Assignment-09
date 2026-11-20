@@ -1,17 +1,15 @@
 
-/* ======================================
+/* =========================================
    EQUIPORA - GLOBAL THEME SYSTEM
-====================================== */
+========================================= */
 
 :root {
   color-scheme: light;
 
   --background: #ffffff;
   --foreground: #171a14;
-
   --surface: #f7f8f3;
   --surface-card: #ffffff;
-
   --border: #e5e9df;
   --muted: #6e7568;
 
@@ -19,7 +17,6 @@
   --accent-text: #151811;
 
   --nav-background: #ffffff;
-
   --input-background: #ffffff;
   --input-text: #171a14;
 
@@ -30,19 +27,15 @@
   --light: #f7f8f3;
 }
 
-/* ======================================
-   DARK MODE
-====================================== */
+/* DARK MODE */
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 
   --background: #111811;
   --foreground: #f5f7f2;
-
   --surface: #192219;
   --surface-card: #202b20;
-
   --border: #354235;
   --muted: #a8b3a5;
 
@@ -50,7 +43,6 @@
   --accent-text: #151811;
 
   --nav-background: #151f16;
-
   --input-background: #202b20;
   --input-text: #f5f7f2;
 
@@ -61,9 +53,13 @@
   --light: #192219;
 }
 
-/* ======================================
+/* =========================================
    GLOBAL STYLES
-====================================== */
+========================================= */
+
+* {
+  box-sizing: border-box;
+}
 
 html {
   scroll-behavior: smooth;
@@ -71,12 +67,10 @@ html {
 }
 
 body {
+  margin: 0;
   background: var(--background);
   color: var(--foreground);
-
-  transition:
-    background 0.25s ease,
-    color 0.25s ease;
+  transition: background 0.25s ease, color 0.25s ease;
 }
 
 body,
@@ -105,14 +99,73 @@ select {
     border-color 0.25s ease;
 }
 
-/* ======================================
+/* =========================================
+   BRAND
+========================================= */
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-icon {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, #c9f269, #8fcf35);
+  color: #151811;
+  font-size: 27px;
+  font-weight: 900;
+  box-shadow: 0 4px 14px rgba(201, 242, 105, 0.25);
+}
+
+.brand-dot {
+  color: #91ba38 !important;
+}
+
+/* =========================================
    NAVBAR
-====================================== */
+========================================= */
 
 .navbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+
+  padding: 13px 5% !important;
+  gap: 20px !important;
+
+  position: relative !important;
+  z-index: 99999 !important;
+
+  overflow: visible !important;
+
   background: var(--nav-background) !important;
   color: var(--foreground) !important;
   border-bottom: 1px solid var(--border) !important;
+}
+
+.navbar > .brand {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+  max-width: 45% !important;
+
+  white-space: nowrap !important;
+  overflow: hidden;
 }
 
 .navbar a,
@@ -128,126 +181,225 @@ select {
   -webkit-text-fill-color: #91ba38 !important;
 }
 
+/* =========================================
+   DESKTOP NAV LINKS
+========================================= */
+
+.navbar > .nav-links {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  gap: clamp(14px, 2vw, 28px) !important;
+}
+
+.navbar > .nav-links a {
+  color: var(--foreground) !important;
+  text-decoration: none !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+}
+
+.navbar > .nav-links a:hover {
+  color: #91ba38 !important;
+}
+
+/* =========================================
+   NAV ACTIONS
+========================================= */
+
+.navbar > .nav-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+
+  flex: 0 1 auto !important;
+  min-width: 0 !important;
+
+  gap: 12px !important;
+  margin-left: auto !important;
+}
+
+.navbar .theme-toggle {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+
+  background: var(--surface-card) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* Login and signup buttons */
+
+.navbar .login-link {
+  text-decoration: none !important;
+  font-weight: 600 !important;
+}
+
 .navbar .signup-btn {
   background: var(--accent) !important;
   color: var(--accent-text) !important;
   -webkit-text-fill-color: var(--accent-text) !important;
 }
 
-.navbar .theme-toggle {
-  background: var(--surface-card) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-}
-
-.navbar .hamburger {
-  background: var(--surface-card) !important;
-  border-color: var(--border) !important;
-}
-
-.navbar .hamburger span {
-  background: var(--foreground) !important;
-}
-
-/* ======================================
-   NAVIGATION MENU COLORS
-====================================== */
-
-.navbar .nav-links.menu-open {
-  background: var(--surface-card) !important;
-  color: var(--foreground) !important;
-  border-color: var(--border) !important;
-  box-shadow: var(--shadow) !important;
-}
-
-.navbar .nav-links.menu-open > a {
-  color: var(--foreground) !important;
-  -webkit-text-fill-color: var(--foreground) !important;
-}
-
-/* ======================================
-   ACCOUNT MENU
-====================================== */
+/* =========================================
+   ACCOUNT / PROFILE MENU
+========================================= */
 
 .navbar .account-menu {
-  position: relative;
-  min-width: 0;
+  position: relative !important;
+  display: block !important;
+  min-width: 0 !important;
+  flex-shrink: 1 !important;
 }
 
 .navbar .account-trigger {
-  max-width: 100%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 9px !important;
+
+  min-width: 0 !important;
+  max-width: 230px !important;
+  padding: 5px 12px 5px 5px !important;
+
+  border: 1px solid var(--border) !important;
+  border-radius: 999px !important;
 
   background: var(--surface-card) !important;
   color: var(--foreground) !important;
 
-  border: 1px solid var(--border) !important;
-
-  -webkit-text-fill-color: var(--foreground) !important;
+  cursor: pointer !important;
 }
 
 .navbar .account-trigger:hover {
   background: var(--surface) !important;
 }
 
-.navbar .account-trigger * {
+.navbar .account-trigger img,
+.navbar .account-avatar-fallback {
+  width: 36px !important;
+  height: 36px !important;
+  flex-shrink: 0 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+}
+
+.navbar .account-avatar-fallback {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
+.navbar .account-trigger-name {
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+
   color: var(--foreground) !important;
-  -webkit-text-fill-color: var(--foreground) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
 }
 
-.navbar .account-trigger img {
-  flex-shrink: 0;
+.navbar .account-chevron {
+  flex-shrink: 0 !important;
+  color: var(--foreground) !important;
 }
 
-/* ======================================
-   ACCOUNT DROPDOWN COMMON
-====================================== */
+/* =========================================
+   ACCOUNT DROPDOWN
+========================================= */
 
 .navbar .account-dropdown {
-  box-sizing: border-box;
-  overflow: hidden;
+  position: absolute !important;
+  top: calc(100% + 12px) !important;
+  right: 0 !important;
+  left: auto !important;
+
+  width: 280px !important;
+  max-width: calc(100vw - 24px) !important;
+  max-height: calc(100vh - 100px) !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
 
   background: var(--surface-card) !important;
   color: var(--foreground) !important;
 
   border: 1px solid var(--border) !important;
-  border-radius: 14px;
-
+  border-radius: 15px !important;
   box-shadow: var(--shadow) !important;
 
-  -webkit-text-fill-color: var(--foreground) !important;
+  z-index: 100000 !important;
 }
 
 .navbar .account-dropdown-header {
+  padding: 16px !important;
   background: var(--surface-card) !important;
-  border-color: var(--border) !important;
+  border-bottom: 1px solid var(--border) !important;
 }
 
 .navbar .account-dropdown-name {
+  margin: 0 !important;
   color: var(--foreground) !important;
-  -webkit-text-fill-color: var(--foreground) !important;
+  font-weight: 700 !important;
+  overflow-wrap: anywhere !important;
 }
 
 .navbar .account-dropdown-email {
+  margin-top: 5px !important;
   color: var(--muted) !important;
-  -webkit-text-fill-color: var(--muted) !important;
+  font-size: 12px !important;
+  overflow-wrap: anywhere !important;
 }
 
 .navbar .account-dropdown-role {
+  display: inline-block !important;
+  margin-top: 10px !important;
+  padding: 5px 12px !important;
+  border-radius: 999px !important;
+
   background: var(--accent) !important;
   color: var(--accent-text) !important;
-  -webkit-text-fill-color: var(--accent-text) !important;
+
+  font-size: 11px !important;
+  font-weight: 700 !important;
 }
 
 .navbar .account-dropdown-links {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 9px !important;
   background: var(--surface-card) !important;
 }
 
-.navbar .account-dropdown-link {
-  display: block;
-  width: 100%;
+.navbar .account-dropdown-link,
+.navbar .account-dropdown-logout {
+  display: block !important;
+  width: 100% !important;
+  padding: 12px !important;
 
+  border: 0 !important;
+  border-radius: 9px !important;
+
+  background: transparent !important;
   color: var(--foreground) !important;
-  -webkit-text-fill-color: var(--foreground) !important;
+
+  text-align: left !important;
+  text-decoration: none !important;
+  font-size: 13px !important;
+
+  cursor: pointer !important;
 }
 
 .navbar .account-dropdown-link:hover {
@@ -256,59 +408,142 @@ select {
 
 .navbar .account-dropdown-logout {
   color: #dc2626 !important;
-  -webkit-text-fill-color: #dc2626 !important;
+  font-weight: 700 !important;
 }
 
 .navbar .account-dropdown-logout:hover {
-  background: #fee2e2 !important;
+  background: rgba(220, 38, 38, 0.1) !important;
 }
 
-:root[data-theme="dark"] .navbar .account-dropdown-logout:hover {
-  background: #451a1a !important;
+/* =========================================
+   GUEST HAMBURGER MENU
+========================================= */
+
+.navbar .guest-menu {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
 }
 
-/* ======================================
-   DESKTOP PROFILE DROPDOWN
-====================================== */
+.navbar .hamburger-button {
+  width: 46px;
+  height: 46px;
 
-@media (min-width: 901px) {
-  .navbar .account-menu-desktop {
-    position: relative !important;
-    display: block !important;
-  }
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 
-  .navbar .account-menu-desktop .account-dropdown {
-    position: fixed !important;
+  border: 1px solid var(--border);
+  border-radius: 13px;
 
-    top: 90px !important;
-    right: 20px !important;
-    left: auto !important;
-
-    width: 260px !important;
-    max-width: calc(100vw - 40px) !important;
-
-    max-height: calc(100vh - 110px) !important;
-    overflow-y: auto !important;
-
-    z-index: 999999 !important;
-  }
-
-  .navbar .mobile-menu-actions {
-    display: none !important;
-  }
-
-  .navbar .mobile-profile-option {
-    display: none !important;
-  }
-
-  .navbar > .nav-actions {
-    display: flex !important;
-  }
+  background: var(--surface-card);
+  cursor: pointer;
 }
 
-/* ======================================
+.navbar .hamburger-button:hover {
+  background: var(--surface);
+}
+
+.navbar .hamburger-line {
+  width: 21px;
+  height: 2px;
+  border-radius: 5px;
+  background: var(--foreground);
+  transition: 0.25s ease;
+}
+
+.navbar .hamburger-line.line-one.open {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.navbar .hamburger-line.line-two.open {
+  opacity: 0;
+}
+
+.navbar .hamburger-line.line-three.open {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Guest dropdown */
+
+.navbar .guest-dropdown {
+  position: absolute !important;
+  top: calc(100% + 12px) !important;
+  right: 0 !important;
+
+  z-index: 100000 !important;
+
+  width: 230px;
+  padding: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  background: var(--surface-card);
+  color: var(--foreground);
+
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+}
+
+.navbar .guest-dropdown a {
+  display: block;
+  padding: 12px 13px;
+
+  color: var(--foreground) !important;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+
+  border-radius: 9px;
+}
+
+.navbar .guest-dropdown a:hover {
+  background: var(--surface);
+}
+
+.navbar .guest-dropdown-divider {
+  height: 1px;
+  margin: 5px 3px;
+  background: var(--border);
+}
+
+.navbar .guest-dropdown a.guest-signup {
+  background: var(--accent);
+  color: var(--accent-text) !important;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* =========================================
+   DASHBOARD NAVBAR
+========================================= */
+
+.dashboard-navbar {
+  justify-content: space-between !important;
+}
+
+.dashboard-navbar > .brand {
+  margin-right: auto !important;
+}
+
+.dashboard-navbar > .nav-actions {
+  display: flex !important;
+  margin-left: auto !important;
+}
+
+.dashboard-navbar .guest-menu {
+  display: none !important;
+}
+
+/* =========================================
    INPUTS AND FORMS
-====================================== */
+========================================= */
 
 input,
 textarea,
@@ -323,9 +558,9 @@ textarea::placeholder {
   color: var(--muted);
 }
 
-/* ======================================
+/* =========================================
    CARDS AND SURFACES
-====================================== */
+========================================= */
 
 .equipment-card,
 .category-card,
@@ -341,9 +576,9 @@ textarea::placeholder {
   color: var(--muted);
 }
 
-/* ======================================
+/* =========================================
    DARK MODE PAGE COLORS
-====================================== */
+========================================= */
 
 :root[data-theme="dark"] .hero,
 :root[data-theme="dark"] .equipment-section {
@@ -351,7 +586,8 @@ textarea::placeholder {
   color: var(--foreground);
 }
 
-:root[data-theme="dark"] .category-card {
+:root[data-theme="dark"] .category-card,
+:root[data-theme="dark"] .equipment-card {
   background: var(--surface-card);
   color: var(--foreground);
   border-color: var(--border);
@@ -359,12 +595,6 @@ textarea::placeholder {
 
 :root[data-theme="dark"] .category-card:hover {
   background: var(--surface);
-}
-
-:root[data-theme="dark"] .equipment-card {
-  background: var(--surface-card);
-  color: var(--foreground);
-  border-color: var(--border);
 }
 
 :root[data-theme="dark"] .floating-card {
@@ -377,10 +607,7 @@ textarea::placeholder {
   border-color: var(--border);
 }
 
-:root[data-theme="dark"] .trust-strip {
-  border-color: var(--border);
-}
-
+:root[data-theme="dark"] .trust-strip,
 :root[data-theme="dark"] .equipment-bottom {
   border-color: var(--border);
 }
@@ -391,9 +618,7 @@ textarea::placeholder {
   border-color: var(--border);
 }
 
-/* ======================================
-   DARK MODE TEXT
-====================================== */
+/* Dark mode text */
 
 :root[data-theme="dark"] .hero h1,
 :root[data-theme="dark"] .section-heading h2,
@@ -411,9 +636,9 @@ textarea::placeholder {
   color: var(--muted);
 }
 
-/* ======================================
+/* =========================================
    BUTTONS
-====================================== */
+========================================= */
 
 .primary-btn,
 .signup-btn,
@@ -428,198 +653,483 @@ textarea::placeholder {
   background: #b7e653;
 }
 
-/* ======================================
-   MOBILE AND TABLET NAVBAR
-====================================== */
+/* =========================================
+   TABLET AND MOBILE NAVBAR
+========================================= */
 
 @media (max-width: 900px) {
   .navbar {
     position: sticky !important;
     top: 0 !important;
     z-index: 99999 !important;
-    overflow: visible !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    width: 100% !important;
+    padding: 10px 4% !important;
+    gap: 8px !important;
   }
 
-  .navbar > .nav-actions {
+  /* Hide desktop navigation links only */
+  .navbar > .nav-links {
     display: none !important;
   }
 
-  /* Compact mobile menu */
+  /* IMPORTANT: Keep actions visible on mobile */
+  .navbar > .nav-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
 
-  .navbar > .nav-links {
-    width: min(260px, calc(100vw - 24px)) !important;
-    max-width: 260px !important;
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    margin-left: auto !important;
+    gap: 8px !important;
+  }
 
-    max-height: calc(100vh - 95px) !important;
-    max-height: calc(100dvh - 95px) !important;
+  .navbar > .brand {
+    max-width: 48% !important;
+  }
+
+  /* Logged-in profile dropdown */
+  .navbar .account-trigger {
+    max-width: min(190px, 42vw) !important;
+  }
+
+  .navbar .account-dropdown {
+    position: fixed !important;
+    top: 72px !important;
+    right: 12px !important;
+    left: auto !important;
+
+    width: 280px !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 88px) !important;
 
     overflow-y: auto !important;
-    overflow-x: hidden !important;
-
-    padding: 10px !important;
-    gap: 2px !important;
-
-    overscroll-behavior: contain;
-    scrollbar-width: thin;
+    z-index: 100000 !important;
   }
 
-  .navbar > .nav-links.menu-open {
+  /* Logged-out guest dropdown */
+  .navbar .guest-dropdown {
+    position: fixed !important;
+    top: 72px !important;
+    right: 12px !important;
+    left: auto !important;
+
+    width: min(250px, calc(100vw - 24px)) !important;
+    max-height: calc(100dvh - 88px) !important;
+    overflow-y: auto !important;
+  }
+
+  /* Dashboard navbar */
+  .dashboard-navbar {
     display: flex !important;
+    justify-content: space-between !important;
+    padding: 10px 12px !important;
   }
 
-  /* Navigation links */
-
-  .navbar > .nav-links > a {
-    display: block !important;
-    width: 100% !important;
-
-    min-height: 38px !important;
-    padding: 9px 10px !important;
-
-    font-size: 13px !important;
-    text-align: left !important;
-
-    border-bottom: 1px solid var(--border);
-    border-radius: 7px;
+  .dashboard-navbar > .brand {
+    max-width: 45% !important;
   }
 
-  /* Mobile profile position */
-
-  .navbar .mobile-profile-option {
-    display: block !important;
-
-    width: 100% !important;
-    min-width: 0 !important;
-
-    padding: 3px 5px !important;
-  }
-
-  .navbar .mobile-profile-option .account-menu {
-    display: block !important;
-    position: relative !important;
-
-    width: 100% !important;
-    min-width: 0 !important;
-
-    flex: none !important;
-  }
-
-  /* Profile trigger */
-
-  .navbar .mobile-profile-option .account-trigger {
+  .dashboard-navbar > .nav-actions {
     display: flex !important;
+    gap: 7px !important;
+  }
+}
 
-    width: 100% !important;
-    max-width: 100% !important;
-    min-height: 40px !important;
+/* =========================================
+   SMALL MOBILE
+========================================= */
 
-    padding: 4px 9px !important;
-    gap: 8px !important;
-
-    justify-content: flex-start !important;
+@media (max-width: 480px) {
+  .navbar {
+    padding: 9px 12px !important;
+    gap: 5px !important;
   }
 
-  .navbar .mobile-profile-option .account-trigger img,
-  .navbar .mobile-profile-option .account-trigger > span:first-child {
+  .navbar > .brand {
+    gap: 7px !important;
+    max-width: 48% !important;
+    font-size: 17px !important;
+  }
+
+  .brand-icon {
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 11px !important;
+    font-size: 23px !important;
+  }
+
+  .navbar > .nav-actions {
+    gap: 6px !important;
+  }
+
+  .navbar .hamburger-button {
+    width: 42px;
+    height: 42px;
+  }
+
+  .navbar .account-trigger {
+    max-width: 145px !important;
+    gap: 5px !important;
+    padding: 4px 8px 4px 4px !important;
+  }
+
+  .navbar .account-trigger img,
+  .navbar .account-avatar-fallback {
     width: 32px !important;
     height: 32px !important;
   }
 
-  .navbar .mobile-profile-option .account-trigger > span:nth-child(2) {
-    font-size: 12px !important;
+  .navbar .account-trigger-name {
+    max-width: 65px !important;
+    font-size: 11px !important;
   }
 
-  /* Mobile profile dropdown */
-
-  .navbar .mobile-profile-option .account-dropdown,
-  .navbar .mobile-profile-option .account-dropdown-mobile {
-    display: block !important;
-
-    position: static !important;
-
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: auto !important;
-
-    transform: none !important;
-
-    width: 100% !important;
-    max-width: 100% !important;
-
-    margin: 6px 0 0 !important;
-
-    box-sizing: border-box !important;
-    overflow: hidden !important;
-
-    border-radius: 10px !important;
-    z-index: auto !important;
+  .navbar .account-dropdown {
+    top: 66px !important;
+    right: 8px !important;
+    width: 280px !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: calc(100dvh - 78px) !important;
   }
 
-  /* Smaller profile information */
-
-  .navbar .mobile-profile-option .account-dropdown-header {
-    padding: 9px !important;
+  .navbar .guest-dropdown {
+    top: 66px !important;
+    right: 8px !important;
+    width: min(250px, calc(100vw - 16px)) !important;
   }
 
-  .navbar .mobile-profile-option .account-dropdown-links {
-    padding: 5px !important;
+  .navbar .account-dropdown-link,
+  .navbar .account-dropdown-logout {
+    padding: 11px !important;
+    font-size: 13px !important;
   }
 
-  .navbar .mobile-profile-option .account-dropdown-link,
-  .navbar .mobile-profile-option .account-dropdown-logout {
-    padding: 8px 10px !important;
-    font-size: 12px !important;
+  .dashboard-navbar {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
   }
 
-  /* Mobile menu actions */
+  .dashboard-navbar > .brand {
+    max-width: 40% !important;
+  }
 
-  .navbar .mobile-menu-actions {
+  .dashboard-navbar .account-trigger {
+    max-width: 145px !important;
+  }
+}
+
+/* =========================================
+   OWNER DASHBOARD THEME
+========================================= */
+
+.owner-dashboard {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.owner-dashboard .dashboard-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+}
+
+.owner-dashboard .dashboard-muted {
+  color: var(--muted);
+}
+
+.owner-dashboard .dashboard-accent {
+  color: var(--accent);
+}
+
+.owner-dashboard .dashboard-input {
+  background: var(--input-background);
+  color: var(--input-text);
+  border: 1px solid var(--border);
+}
+
+.owner-dashboard .dashboard-input::placeholder {
+  color: var(--muted);
+}
+
+.owner-dashboard .dashboard-secondary-button {
+  background: var(--surface);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+}
+
+.owner-dashboard .dashboard-equipment-card {
+  background: var(--surface-card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.owner-dashboard .dashboard-divider {
+  border-color: var(--border);
+}
+
+/* Owner dashboard responsive */
+
+@media (max-width: 600px) {
+  .owner-dashboard .dashboard-content {
+    padding: 25px 5% !important;
+  }
+
+  .owner-dashboard .dashboard-card {
+    padding: 17px;
+  }
+
+  .owner-dashboard .dashboard-title {
+    font-size: 30px !important;
+  }
+}
+
+/* =========================================
+   EQUIPORA NAVBAR - FINAL VISIBILITY FIX
+========================================= */
+
+.navbar > .equipora-navbar-actions {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  gap: 10px !important;
+  margin-left: auto !important;
+  position: relative !important;
+  z-index: 100001 !important;
+}
+
+.navbar .equipora-account-menu,
+.navbar .equipora-guest-menu {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
+}
+
+@media (max-width: 900px) {
+  .navbar > .equipora-navbar-actions {
     display: flex !important;
-
-    flex-direction: column !important;
-    align-items: stretch !important;
-
-    width: 100% !important;
-    min-width: 0 !important;
-
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-direction: row !important;
     gap: 7px !important;
-    padding-top: 7px !important;
   }
 
-  .navbar .mobile-menu-actions > * {
-    width: 100% !important;
-    min-height: 36px !important;
+  .navbar .equipora-account-menu,
+  .navbar .equipora-guest-menu {
+    display: flex !important;
   }
 
-  .navbar .mobile-menu-actions .theme-toggle {
-    position: static !important;
-    align-self: flex-start !important;
+  .navbar .equipora-account-menu .account-dropdown,
+  .navbar .equipora-guest-menu .guest-dropdown {
+    position: fixed !important;
+    top: 72px !important;
+    right: 12px !important;
+    left: auto !important;
+    max-width: calc(100vw - 24px) !important;
+    max-height: calc(100dvh - 90px) !important;
+    overflow-y: auto !important;
+    z-index: 100002 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .navbar > .equipora-navbar-actions {
+    gap: 5px !important;
+  }
+
+  .navbar .account-trigger {
+    max-width: 145px !important;
+  }
+
+  .navbar .equipora-account-menu .account-dropdown,
+  .navbar .equipora-guest-menu .guest-dropdown {
+    top: 66px !important;
+    right: 8px !important;
+    max-width: calc(100vw - 16px) !important;
   }
 }
 
 /* ======================================
-   SMALL MOBILE
+   ADMIN & OWNER NAVBAR THEME TOGGLE FIX
 ====================================== */
 
+.navbar .equipora-navbar-actions > .theme-toggle {
+  position: relative !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  transform: none !important;
+
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  flex-shrink: 0 !important;
+  width: auto !important;
+  min-width: max-content !important;
+
+  margin: 0 !important;
+  z-index: 100002 !important;
+}
+
+/* Keep Theme and Profile side by side */
+.navbar > .equipora-navbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+}
+
+/* ======================================
+   EQUIPORA DESKTOP & MOBILE NAVIGATION
+====================================== */
+
+/* Navbar layout */
+.navbar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: nowrap !important;
+  gap: 20px !important;
+  position: relative !important;
+  z-index: 1000 !important;
+}
+
+/* Desktop navigation */
+.navbar .equipora-desktop-links {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 28px !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  margin: 0 auto !important;
+}
+
+.navbar .equipora-desktop-links a {
+  color: var(--foreground, #ffffff) !important;
+  text-decoration: none !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  transition: color 0.2s ease !important;
+}
+
+.navbar .equipora-desktop-links a:hover {
+  color: var(--accent-text, #c9f269) !important;
+}
+
+/* Desktop Get Started */
+.navbar .equipora-desktop-links .equipora-signup-link {
+  background: var(--accent, #c9f269) !important;
+  color: var(--accent-text, #080808) !important;
+  padding: 11px 18px !important;
+  border-radius: 30px !important;
+  font-weight: 700 !important;
+}
+
+/* Desktop Login */
+.navbar .equipora-desktop-links .equipora-login-link {
+  font-weight: 600 !important;
+}
+
+/* Navbar actions */
+.navbar > .equipora-navbar-actions {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  flex-wrap: nowrap !important;
+  gap: 10px !important;
+  flex: 0 0 auto !important;
+  min-width: max-content !important;
+  margin-left: auto !important;
+}
+
+/* Hide mobile hamburger on desktop */
+.navbar .equipora-guest-mobile-menu {
+  display: none !important;
+}
+
+/* Keep profile visible */
+.navbar .equipora-account-menu {
+  display: flex !important;
+  align-items: center !important;
+  position: relative !important;
+  flex-shrink: 0 !important;
+}
+
+/* Dashboard has no desktop navigation links */
+.navbar.dashboard-navbar .equipora-desktop-links {
+  display: none !important;
+}
+
+/* ======================================
+   MOBILE NAVIGATION
+====================================== */
+
+@media (max-width: 900px) {
+  .navbar {
+    gap: 10px !important;
+  }
+
+  .navbar .equipora-desktop-links {
+    display: none !important;
+  }
+
+  .navbar .equipora-guest-mobile-menu {
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
+  }
+
+  .navbar > .equipora-navbar-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+  }
+}
+
+/* Small mobile screens */
 @media (max-width: 480px) {
   .navbar {
-    padding-left: 5% !important;
-    padding-right: 5% !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
   }
 
-  .navbar > .nav-links {
-    width: calc(100vw - 24px) !important;
-    max-width: 260px !important;
+  .navbar .brand {
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
   }
 
-  .navbar .account-trigger {
-    max-width: 100%;
-    gap: 8px;
+  .navbar .account-trigger-name {
+    display: none !important;
   }
 
-  .navbar .account-dropdown {
-    width: 100%;
-    max-width: 100%;
+  .navbar > .equipora-navbar-actions {
+    gap: 7px !important;
   }
 }

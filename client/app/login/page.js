@@ -3,14 +3,16 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import "./auth.css";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [form, setForm] = useState({
     email: "",
@@ -28,12 +30,10 @@ export default function LoginPage() {
     });
   };
 
-  // Google Login
   const handleGoogleLogin = () => {
     window.location.href = `${API_URL}/api/auth/google`;
   };
 
-  // GitHub Login
   const handleGithubLogin = () => {
     window.location.href = `${API_URL}/api/auth/github`;
   };
@@ -54,25 +54,48 @@ export default function LoginPage() {
 
       const result = await response.json();
 
-      if (!response.ok) {
+      if (!response.ok || !result.success) {
         throw new Error(result.message || "Login failed!");
       }
 
+      if (!result.token) {
+        throw new Error("Login successful, but server did not return a token.");
+      }
+
+      // Save authentication token
       localStorage.setItem("equipora-token", result.token);
+      localStorage.setItem("token", result.token);
+
+      // Save user information
       localStorage.setItem(
         "equipora-user",
         JSON.stringify(result.data)
       );
 
-      if (result.data.role === "Admin") {
-        router.push("/dashboard/admin");
-      } else if (result.data.role === "Owner") {
-        router.push("/dashboard/owner");
-      } else {
-        router.push("/dashboard/customer");
+      // Verify token was saved
+      const savedToken =
+        localStorage.getItem("equipora-token") ||
+        localStorage.getItem("token");
+
+      if (!savedToken) {
+        throw new Error("Unable to save login token. Please try again.");
       }
+
+      // Return to the page user wanted before login
+      const returnTo = searchParams.get("callbackUrl");
+
+      if (returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")) {
+        router.replace(returnTo);
+      } else if (result.data.role === "Admin") {
+        router.replace("/dashboard/admin");
+      } else if (result.data.role === "Owner") {
+        router.replace("/dashboard/owner");
+      } else {
+        router.replace("/dashboard/customer");
+      }
+
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "Something went wrong!");
     } finally {
       setLoading(false);
     }
@@ -126,7 +149,6 @@ export default function LoginPage() {
 
           {error && <div className="auth-error">{error}</div>}
 
-          {/* Email and Password Login */}
           <form onSubmit={handleSubmit}>
             <label htmlFor="email">Email address</label>
 
@@ -167,52 +189,33 @@ export default function LoginPage() {
               className="auth-submit"
               disabled={loading}
             >
-              {loading
-                ? "Signing in..."
-                : "Sign in to your account ↗"}
+              {loading ? "Signing in..." : "Sign in to your account ↗"}
             </button>
           </form>
 
-          {/* Social Login Divider */}
           <div className="social-divider">
             <span></span>
             <p>OR CONTINUE WITH</p>
             <span></span>
           </div>
 
-          {/* Google and GitHub Login */}
           <div className="social-login-buttons">
-
             <button
               type="button"
               className="social-login-btn google-login-btn"
               onClick={handleGoogleLogin}
             >
-              {/* Official Google G Logo */}
               <svg
                 viewBox="0 0 48 48"
                 width="21"
                 height="21"
                 aria-hidden="true"
               >
-                <path
-                  fill="#4285F4"
-                  d="M43.6 24.5c0-1.5-.1-3-.4-4.4H24v8.3h11a9.4 9.4 0 0 1-4.1 6.2v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.2c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.4A20 20 0 0 0 24 44Z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M12.8 27.7a12 12 0 0 1 0-7.4v-5.4H5.9a20 20 0 0 0 0 18.2l6.9-5.4Z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M24 12.1c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 14.9l6.9 5.4c1.6-4.7 6-8.2 11.2-8.2Z"
-                />
+                <path fill="#4285F4" d="M43.6 24.5c0-1.5-.1-3-.4-4.4H24v8.3h11a9.4 9.4 0 0 1-4.1 6.2v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z" />
+                <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.2c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.4A20 20 0 0 0 24 44Z" />
+                <path fill="#FBBC05" d="M12.8 27.7a12 12 0 0 1 0-7.4v-5.4H5.9a20 20 0 0 0 0 18.2l6.9-5.4Z" />
+                <path fill="#EA4335" d="M24 12.1c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 14.9l6.9 5.4c1.6-4.7 6-8.2 11.2-8.2Z" />
               </svg>
-
               <span>Continue with Google</span>
             </button>
 
@@ -221,7 +224,6 @@ export default function LoginPage() {
               className="social-login-btn github-login-btn"
               onClick={handleGithubLogin}
             >
-              {/* Official GitHub Mark */}
               <svg
                 viewBox="0 0 24 24"
                 width="21"
@@ -231,10 +233,8 @@ export default function LoginPage() {
               >
                 <path d="M12 .9a11.1 11.1 0 0 0-3.5 21.6c.6.1.8-.3.8-.6v-2.1c-3.4.7-4.1-1.4-4.1-1.4-.5-1.3-1.2-1.7-1.2-1.7-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6.1 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17 3.3 18 3.6 18 3.6c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.8-2.9 5.8-5.6 6.1.4.4.8 1.1.8 2.2v3.8c0 .3.2.7.8.6A11.1 11.1 0 0 0 12 .9Z" />
               </svg>
-
               <span>Continue with GitHub</span>
             </button>
-
           </div>
 
           <div className="auth-switch">

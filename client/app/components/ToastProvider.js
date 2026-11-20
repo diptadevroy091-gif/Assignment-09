@@ -24,6 +24,7 @@ export function useToast() {
 export default function ToastProvider({ children }) {
   const [toast, setToast] = useState(null);
 
+  // Show Toast
   const showToast = useCallback((message, type = "success") => {
     setToast({
       id: Date.now(),
@@ -32,10 +33,12 @@ export default function ToastProvider({ children }) {
     });
   }, []);
 
+  // Close Toast
   const closeToast = useCallback(() => {
     setToast(null);
   }, []);
 
+  // Auto close after 3.5 seconds
   useEffect(() => {
     if (!toast) return;
 
@@ -46,42 +49,103 @@ export default function ToastProvider({ children }) {
     return () => clearTimeout(timer);
   }, [toast]);
 
-  const styles = {
-    success: "bg-green-600",
-    error: "bg-red-600",
-    info: "bg-blue-600",
-    warning: "bg-yellow-500 text-black",
+  const toastStyles = {
+    success: {
+      background: "#16a34a",
+      color: "#ffffff",
+      icon: "✓",
+    },
+    error: {
+      background: "#dc2626",
+      color: "#ffffff",
+      icon: "✕",
+    },
+    info: {
+      background: "#2563eb",
+      color: "#ffffff",
+      icon: "ⓘ",
+    },
+    warning: {
+      background: "#eab308",
+      color: "#111111",
+      icon: "⚠",
+    },
   };
 
-  const icons = {
-    success: "✓",
-    error: "✕",
-    info: "ⓘ",
-    warning: "⚠",
-  };
+  const currentStyle =
+    toastStyles[toast?.type] || toastStyles.success;
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
 
+      {/* GLOBAL TOAST NOTIFICATION */}
       {toast && (
         <div
           key={toast.id}
           role={toast.type === "error" ? "alert" : "status"}
-          className={`fixed top-5 right-5 z-[9999] flex items-center gap-3 rounded-xl px-5 py-4 text-white shadow-2xl ${styles[toast.type] || styles.success}`}
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            top: "calc(env(safe-area-inset-top, 0px) + 100px)",
+            right: "20px",
+            zIndex: 99999,
+            width: "max-content",
+            maxWidth: "min(420px, calc(100vw - 32px))",
+            minWidth: "min(280px, calc(100vw - 32px))",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            padding: "15px 18px",
+            borderRadius: "12px",
+            background: currentStyle.background,
+            color: currentStyle.color,
+            boxShadow: "0 12px 35px rgba(0, 0, 0, 0.30)",
+            fontFamily: "Arial, sans-serif",
+            boxSizing: "border-box",
+          }}
         >
-          <span className="text-xl font-bold">
-            {icons[toast.type] || icons.success}
+          {/* ICON */}
+          <span
+            style={{
+              fontSize: "21px",
+              fontWeight: "bold",
+              flexShrink: 0,
+            }}
+          >
+            {currentStyle.icon}
           </span>
 
-          <p className="text-sm font-medium">
+          {/* MESSAGE */}
+          <p
+            style={{
+              margin: 0,
+              fontSize: "14px",
+              fontWeight: "600",
+              lineHeight: "1.5",
+              flex: 1,
+              overflowWrap: "anywhere",
+            }}
+          >
             {toast.message}
           </p>
 
+          {/* CLOSE BUTTON */}
           <button
+            type="button"
             onClick={closeToast}
-            className="ml-2 text-lg opacity-80 hover:opacity-100"
             aria-label="Close notification"
+            style={{
+              border: "none",
+              background: "transparent",
+              color: "inherit",
+              fontSize: "23px",
+              cursor: "pointer",
+              padding: "0 2px",
+              lineHeight: 1,
+              opacity: 0.85,
+              flexShrink: 0,
+            }}
           >
             ×
           </button>

@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Navbar from "../../components/Navbar";
+import { useToast } from "../../components/ToastProvider";
 
 const API_BASE = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
@@ -34,6 +36,7 @@ const initialForm = {
 
 export default function OwnerDashboard() {
   const router = useRouter();
+  const { showToast } = useToast();
 
   const [user, setUser] = useState(null);
   const [equipment, setEquipment] = useState([]);
@@ -46,12 +49,9 @@ export default function OwnerDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
   const cardStyle = {
-    background: "#151515",
-    border: "1px solid #292929",
+    background: "var(--surface-card, #151515)",
+    border: "1px solid var(--border, #292929)",
     borderRadius: "14px",
     padding: "24px",
   };
@@ -59,9 +59,9 @@ export default function OwnerDashboard() {
   const inputStyle = {
     width: "100%",
     padding: "13px 14px",
-    background: "#080808",
-    color: "#fff",
-    border: "1px solid #333",
+    background: "var(--background, #080808)",
+    color: "var(--foreground, #fff)",
+    border: "1px solid var(--border, #333)",
     borderRadius: "8px",
     outline: "none",
     fontSize: "14px",
@@ -71,32 +71,38 @@ export default function OwnerDashboard() {
   const labelStyle = {
     display: "block",
     marginBottom: "9px",
-    color: "#ccc",
+    color: "var(--foreground, #ccc)",
     fontSize: "14px",
     fontWeight: "600",
   };
 
   const buttonStyle = {
-    background: "#c9f269",
-    color: "#080808",
+    background: "var(--accent, #c9f269)",
+    color: "var(--accent-text, #080808)",
     border: "none",
     padding: "13px 22px",
     borderRadius: "8px",
     fontWeight: "bold",
     cursor: "pointer",
+    display: "inline-block",
+    textAlign: "center",
   };
 
   const secondaryButtonStyle = {
-    background: "#252525",
-    color: "#fff",
-    border: "1px solid #444",
+    background: "var(--surface, #252525)",
+    color: "var(--foreground, #fff)",
+    border: "1px solid var(--border, #444)",
     padding: "11px 18px",
     borderRadius: "8px",
     fontWeight: "bold",
     cursor: "pointer",
   };
 
-  const fetchMyEquipment = async (token) => {
+  // Fetch owner's equipment
+  const fetchMyEquipment = async (
+    token,
+    showErrorToast = true
+  ) => {
     try {
       setLoading(true);
 
@@ -114,18 +120,25 @@ export default function OwnerDashboard() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Failed to load equipment.");
+        throw new Error(
+          result.message || "Failed to load equipment."
+        );
       }
 
       setEquipment(result.data || []);
-      setError("");
     } catch (err) {
-      setError(err.message || "Could not load your equipment.");
+      if (showErrorToast) {
+        showToast(
+          err.message || "Could not load your equipment.",
+          "error"
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Authentication and role check
   useEffect(() => {
     const token = localStorage.getItem("equipora-token");
     const savedUser = localStorage.getItem("equipora-user");
@@ -156,12 +169,7 @@ export default function OwnerDashboard() {
     }
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("equipora-token");
-    localStorage.removeItem("equipora-user");
-    router.replace("/login");
-  };
-
+  // Form input change
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -171,16 +179,19 @@ export default function OwnerDashboard() {
     }));
   };
 
-  // Open form for adding equipment
+  // Open add form
   const openAddForm = () => {
     setEditingId(null);
     setForm(initialForm);
     setShowForm(true);
-    setMessage("");
-    setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
-  // Open form with existing equipment information
+  // Open edit form
   const handleEdit = (item) => {
     setEditingId(item._id);
 
@@ -191,7 +202,9 @@ export default function OwnerDashboard() {
       location: item.location || "",
       rentalPrice: String(item.rentalPrice ?? ""),
       rentalType: item.rentalType || "Daily",
-      availableQuantity: String(item.availableQuantity ?? ""),
+      availableQuantity: String(
+        item.availableQuantity ?? ""
+      ),
       condition: item.condition || "",
       brand: item.brand || "",
       model: item.model || "",
@@ -200,8 +213,6 @@ export default function OwnerDashboard() {
     });
 
     setShowForm(true);
-    setMessage("");
-    setError("");
 
     window.scrollTo({
       top: 0,
@@ -209,7 +220,7 @@ export default function OwnerDashboard() {
     });
   };
 
-  // Close and reset form
+  // Close form
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
@@ -219,18 +230,21 @@ export default function OwnerDashboard() {
   // Add or update equipment
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     setSubmitting(true);
-    setMessage("");
-    setError("");
 
     try {
       const token = localStorage.getItem("equipora-token");
 
+      if (!token) {
+        throw new Error("Please login again.");
+      }
+
       const equipmentData = {
         ...form,
         rentalPrice: Number(form.rentalPrice),
-        availableQuantity: Number(form.availableQuantity),
+        availableQuantity: Number(
+          form.availableQuantity
+        ),
       };
 
       const isEditing = Boolean(editingId);
@@ -256,18 +270,21 @@ export default function OwnerDashboard() {
         );
       }
 
-      setMessage(
+      showToast(
         result.message ||
           (isEditing
             ? "Equipment updated successfully!"
-            : "Equipment added successfully!")
+            : "Equipment added successfully!"),
+        "success"
       );
 
       closeForm();
-
-      await fetchMyEquipment(token);
+      await fetchMyEquipment(token, false);
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      showToast(
+        err.message || "Something went wrong.",
+        "error"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -282,11 +299,13 @@ export default function OwnerDashboard() {
     if (!confirmed) return;
 
     setDeletingId(item._id);
-    setMessage("");
-    setError("");
 
     try {
       const token = localStorage.getItem("equipora-token");
+
+      if (!token) {
+        throw new Error("Please login again.");
+      }
 
       const response = await fetch(
         `${API_BASE}/api/equipment/my-equipment/${item._id}`,
@@ -306,33 +325,41 @@ export default function OwnerDashboard() {
         );
       }
 
-      setMessage(result.message || "Equipment deleted successfully!");
+      showToast(
+        result.message || "Equipment deleted successfully!",
+        "success"
+      );
 
       if (editingId === item._id) {
         closeForm();
       }
 
-      await fetchMyEquipment(token);
+      await fetchMyEquipment(token, false);
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      showToast(
+        err.message || "Something went wrong.",
+        "error"
+      );
     } finally {
       setDeletingId(null);
     }
   };
 
+  // Equipment status color
   const getStatusColor = (status) => {
     if (status === "Approved") return "#9be7a5";
     if (status === "Rejected") return "#ff8585";
     return "#ffd479";
   };
 
+  // Loading screen
   if (!user) {
     return (
       <main
         style={{
           minHeight: "100vh",
-          background: "#080808",
-          color: "#fff",
+          background: "var(--background, #080808)",
+          color: "var(--foreground, #fff)",
           display: "grid",
           placeItems: "center",
           fontFamily: "Arial, sans-serif",
@@ -347,548 +374,645 @@ export default function OwnerDashboard() {
     <main
       style={{
         minHeight: "100vh",
-        background: "#080808",
-        color: "#fff",
-        padding: "35px 6%",
+        background: "var(--background, #080808)",
+        color: "var(--foreground, #fff)",
         fontFamily: "Arial, sans-serif",
       }}
     >
-      {/* Header */}
-      <header
+      {/* SHARED WEBSITE NAVBAR */}
+      <Navbar />
+
+      <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "20px",
-          borderBottom: "1px solid #292929",
-          paddingBottom: "22px",
+          padding: "35px 6%",
+          maxWidth: "1600px",
+          margin: "0 auto",
         }}
       >
-        <h2 style={{ margin: 0 }}>
-          Equipora <span style={{ color: "#c9f269" }}>Owner</span>
-        </h2>
-
-        <button onClick={handleLogout} style={buttonStyle}>
-          Logout
-        </button>
-      </header>
-
-      {/* Dashboard Introduction */}
-      <section style={{ marginTop: "45px" }}>
-        <p
-          style={{
-            color: "#c9f269",
-            letterSpacing: "2px",
-            fontSize: "12px",
-          }}
-        >
-          EQUIPMENT OWNER PANEL
-        </p>
-
-        <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", marginBottom: "12px" }}>
-          Welcome, {user.name || "Owner"}!
-        </h1>
-
-        <p style={{ color: "#999", lineHeight: 1.7 }}>
-          Manage your equipment rental business from your dashboard.
-        </p>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "20px",
-            marginTop: "30px",
-          }}
-        >
-          <div style={cardStyle}>
-            <p style={{ color: "#999" }}>Account Type</p>
-            <h2 style={{ color: "#c9f269" }}>Equipment Owner</h2>
-          </div>
-
-          <div style={cardStyle}>
-            <p style={{ color: "#999" }}>Owner Name</p>
-            <h2>{user.name || "Owner"}</h2>
-          </div>
-
-          <div style={cardStyle}>
-            <p style={{ color: "#999" }}>Owner Email</p>
-            <h3 style={{ overflowWrap: "anywhere" }}>{user.email}</h3>
-          </div>
-        </div>
-      </section>
-
-      {/* Equipment Management */}
-      <section style={{ marginTop: "45px" }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "15px",
-            marginBottom: "22px",
-          }}
-        >
-          <div>
-            <h2 style={{ fontSize: "27px", marginBottom: "8px" }}>
-              My Equipment
-            </h2>
-
-            <p style={{ color: "#999", margin: 0 }}>
-              Manage the equipment you have submitted.
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <button
-              onClick={() =>
-                fetchMyEquipment(localStorage.getItem("equipora-token"))
-              }
-              style={secondaryButtonStyle}
-            >
-              Refresh List
-            </button>
-
-            <button
-              onClick={showForm ? closeForm : openAddForm}
-              style={buttonStyle}
-            >
-              {showForm ? "Close Form" : "+ Add Equipment"}
-            </button>
-          </div>
-        </div>
-
-        {message && (
-          <div
+        {/* DASHBOARD INTRODUCTION */}
+        <section style={{ marginTop: "20px" }}>
+          <p
             style={{
-              background: "#17351d",
-              color: "#9be7a5",
-              padding: "14px",
-              borderRadius: "8px",
-              marginBottom: "20px",
+              color: "var(--accent, #c9f269)",
+              letterSpacing: "2px",
+              fontSize: "12px",
             }}
           >
-            {message}
-          </div>
-        )}
+            EQUIPMENT OWNER PANEL
+          </p>
 
-        {error && (
-          <div
+          <h1
             style={{
-              background: "#381919",
-              color: "#ff9999",
-              padding: "14px",
-              borderRadius: "8px",
-              marginBottom: "20px",
-              overflowWrap: "anywhere",
+              fontSize: "clamp(30px, 5vw, 46px)",
+              marginBottom: "12px",
             }}
           >
-            {error}
-          </div>
-        )}
+            Welcome, {user.name || "Owner"}!
+          </h1>
 
-        {/* Add / Edit Equipment Form */}
-        {showForm && (
-          <div style={{ ...cardStyle, marginBottom: "30px" }}>
-            <h2 style={{ marginTop: 0, marginBottom: "25px" }}>
-              {editingId ? "Edit Equipment" : "Add New Equipment"}
-            </h2>
-
-            {editingId && (
-              <p style={{ color: "#ffd479", lineHeight: 1.6 }}>
-                Note: After editing, this equipment will return to Pending
-                status and require admin approval again.
-              </p>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                  gap: "20px",
-                }}
-              >
-                <div>
-                  <label style={labelStyle}>Equipment Name *</label>
-                  <input
-                    style={inputStyle}
-                    name="equipmentName"
-                    value={form.equipmentName}
-                    onChange={handleChange}
-                    placeholder="e.g. Canon Camera"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Category *</label>
-                  <select
-                    style={inputStyle}
-                    name="category"
-                    value={form.category}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="">Select Category</option>
-                    {categories.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Brand *</label>
-                  <input
-                    style={inputStyle}
-                    name="brand"
-                    value={form.brand}
-                    onChange={handleChange}
-                    placeholder="e.g. Canon"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Model *</label>
-                  <input
-                    style={inputStyle}
-                    name="model"
-                    value={form.model}
-                    onChange={handleChange}
-                    placeholder="e.g. EOS 90D"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Location *</label>
-                  <input
-                    style={inputStyle}
-                    name="location"
-                    value={form.location}
-                    onChange={handleChange}
-                    placeholder="e.g. Dhaka, Bangladesh"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Rental Price *</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    name="rentalPrice"
-                    value={form.rentalPrice}
-                    onChange={handleChange}
-                    placeholder="Enter price"
-                    min="0"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Rental Type *</label>
-                  <select
-                    style={inputStyle}
-                    name="rentalType"
-                    value={form.rentalType}
-                    onChange={handleChange}
-                    required
-                  >
-                    <option value="Daily">Daily</option>
-                    <option value="Weekly">Weekly</option>
-                    <option value="Monthly">Monthly</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Available Quantity *</label>
-                  <input
-                    style={inputStyle}
-                    type="number"
-                    name="availableQuantity"
-                    value={form.availableQuantity}
-                    onChange={handleChange}
-                    placeholder="Enter quantity"
-                    min="0"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Condition *</label>
-                  <input
-                    style={inputStyle}
-                    name="condition"
-                    value={form.condition}
-                    onChange={handleChange}
-                    placeholder="e.g. Excellent / Good"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={labelStyle}>Image URL *</label>
-                  <input
-                    style={inputStyle}
-                    type="url"
-                    name="imageUrl"
-                    value={form.imageUrl}
-                    onChange={handleChange}
-                    placeholder="https://example.com/image.jpg"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginTop: "20px" }}>
-                <label style={labelStyle}>Description *</label>
-                <textarea
-                  style={{
-                    ...inputStyle,
-                    minHeight: "100px",
-                    resize: "vertical",
-                  }}
-                  name="description"
-                  value={form.description}
-                  onChange={handleChange}
-                  placeholder="Describe your equipment..."
-                  required
-                />
-              </div>
-
-              <div style={{ marginTop: "20px" }}>
-                <label style={labelStyle}>Rental Terms *</label>
-                <textarea
-                  style={{
-                    ...inputStyle,
-                    minHeight: "100px",
-                    resize: "vertical",
-                  }}
-                  name="rentalTerms"
-                  value={form.rentalTerms}
-                  onChange={handleChange}
-                  placeholder="Write your rental terms and conditions..."
-                  required
-                />
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                  marginTop: "22px",
-                }}
-              >
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{
-                    ...buttonStyle,
-                    opacity: submitting ? 0.6 : 1,
-                    cursor: submitting ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {submitting
-                    ? "Saving..."
-                    : editingId
-                      ? "Update Equipment"
-                      : "Submit Equipment"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={submitting}
-                  style={secondaryButtonStyle}
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Equipment List */}
-        {loading ? (
-          <div style={cardStyle}>
-            <p style={{ color: "#c9f269" }}>Loading your equipment...</p>
-          </div>
-        ) : equipment.length === 0 ? (
-          <div
+          <p
             style={{
-              ...cardStyle,
-              textAlign: "center",
-              padding: "45px 20px",
+              color: "var(--muted, #999)",
+              lineHeight: 1.7,
             }}
           >
-            <h3>No Equipment Found</h3>
-            <p style={{ color: "#999", lineHeight: 1.7 }}>
-              You have not added any equipment yet. Click the Add Equipment
-              button to submit your first item.
-            </p>
-          </div>
-        ) : (
+            Manage your equipment rental business from your
+            dashboard.
+          </p>
+
+          {/* ACCOUNT INFORMATION */}
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-              gap: "22px",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "20px",
+              marginTop: "30px",
             }}
           >
-            {equipment.map((item) => (
-              <article
-                key={item._id}
+            <div style={cardStyle}>
+              <p style={{ color: "var(--muted, #999)" }}>
+                Account Type
+              </p>
+              <h2 style={{ color: "var(--accent, #c9f269)" }}>
+                Equipment Owner
+              </h2>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: "var(--muted, #999)" }}>
+                Owner Name
+              </p>
+              <h2>{user.name || "Owner"}</h2>
+            </div>
+
+            <div style={cardStyle}>
+              <p style={{ color: "var(--muted, #999)" }}>
+                Owner Email
+              </p>
+              <h3 style={{ overflowWrap: "anywhere" }}>
+                {user.email}
+              </h3>
+            </div>
+          </div>
+        </section>
+
+        {/* EQUIPMENT MANAGEMENT */}
+        <section style={{ marginTop: "45px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "15px",
+              marginBottom: "22px",
+            }}
+          >
+            <div>
+              <h2
                 style={{
-                  ...cardStyle,
-                  padding: "0",
-                  overflow: "hidden",
+                  fontSize: "27px",
+                  marginBottom: "8px",
                 }}
               >
-                {item.imageUrl && (
-                  <img
-                    src={item.imageUrl}
-                    alt={item.equipmentName}
-                    style={{
-                      width: "100%",
-                      height: "190px",
-                      objectFit: "cover",
-                      background: "#222",
-                    }}
-                  />
-                )}
+                My Equipment
+              </h2>
 
-                <div style={{ padding: "20px" }}>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: "10px",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: "#c9f269",
-                        letterSpacing: "1px",
-                      }}
-                    >
-                      {item.category}
-                    </span>
+              <p
+                style={{
+                  color: "var(--muted, #999)",
+                  margin: 0,
+                }}
+              >
+                Manage the equipment you have submitted.
+              </p>
+            </div>
 
-                    <span
-                      style={{
-                        color: getStatusColor(item.status),
-                        background: "#252525",
-                        padding: "6px 10px",
-                        borderRadius: "20px",
-                        fontSize: "11px",
-                        fontWeight: "bold",
-                      }}
-                    >
-                      {item.status || "Pending"}
-                    </span>
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                onClick={() =>
+                  fetchMyEquipment(
+                    localStorage.getItem("equipora-token")
+                  )
+                }
+                style={secondaryButtonStyle}
+                disabled={loading}
+              >
+                {loading ? "Refreshing..." : "Refresh List"}
+              </button>
+
+              <button
+                onClick={
+                  showForm ? closeForm : openAddForm
+                }
+                style={buttonStyle}
+              >
+                {showForm ? "Close Form" : "+ Add Equipment"}
+              </button>
+            </div>
+          </div>
+
+          {/* ADD / EDIT FORM */}
+          {showForm && (
+            <div
+              style={{
+                ...cardStyle,
+                marginBottom: "30px",
+              }}
+            >
+              <h2
+                style={{
+                  marginTop: 0,
+                  marginBottom: "25px",
+                }}
+              >
+                {editingId
+                  ? "Edit Equipment"
+                  : "Add New Equipment"}
+              </h2>
+
+              {editingId && (
+                <p
+                  style={{
+                    color: "#ffd479",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Note: After editing, this equipment will
+                  return to Pending status and require admin
+                  approval again.
+                </p>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(220px, 1fr))",
+                    gap: "20px",
+                  }}
+                >
+                  <div>
+                    <label style={labelStyle}>
+                      Equipment Name *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      name="equipmentName"
+                      value={form.equipmentName}
+                      onChange={handleChange}
+                      placeholder="e.g. Canon Camera"
+                      required
+                    />
                   </div>
 
-                  <h3 style={{ fontSize: "21px", marginBottom: "8px" }}>
-                    {item.equipmentName}
-                  </h3>
-
-                  <p
-                    style={{
-                      color: "#999",
-                      fontSize: "13px",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    {item.description}
-                  </p>
-
-                  <div
-                    style={{
-                      borderTop: "1px solid #333",
-                      marginTop: "16px",
-                      paddingTop: "15px",
-                    }}
-                  >
-                    <p style={{ margin: "7px 0", color: "#ccc" }}>
-                      <strong style={{ color: "#c9f269" }}>
-                        ৳{item.rentalPrice}
-                      </strong>{" "}
-                      / {item.rentalType}
-                    </p>
-
-                    <p style={{ margin: "7px 0", color: "#999" }}>
-                      Location: {item.location}
-                    </p>
-
-                    <p style={{ margin: "7px 0", color: "#999" }}>
-                      Quantity: {item.availableQuantity}
-                    </p>
-
-                    <p style={{ margin: "7px 0", color: "#999" }}>
-                      Brand: {item.brand} {item.model}
-                    </p>
-
-                    <p style={{ margin: "7px 0", color: "#999" }}>
-                      Condition: {item.condition}
-                    </p>
+                  <div>
+                    <label style={labelStyle}>
+                      Category *
+                    </label>
+                    <select
+                      style={inputStyle}
+                      name="category"
+                      value={form.category}
+                      onChange={handleChange}
+                      required
+                    >
+                      <option value="">
+                        Select Category
+                      </option>
+                      {categories.map((category) => (
+                        <option
+                          key={category}
+                          value={category}
+                        >
+                          {category}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
-                  {/* Edit and Delete Buttons */}
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: "10px",
-                      marginTop: "20px",
-                    }}
-                  >
-                    <button
-                      onClick={() => handleEdit(item)}
-                      style={{
-                        ...buttonStyle,
-                        flex: 1,
-                        padding: "11px",
-                      }}
-                    >
-                      Edit
-                    </button>
+                  <div>
+                    <label style={labelStyle}>Brand *</label>
+                    <input
+                      style={inputStyle}
+                      name="brand"
+                      value={form.brand}
+                      onChange={handleChange}
+                      placeholder="e.g. Canon"
+                      required
+                    />
+                  </div>
 
-                    <button
-                      onClick={() => handleDelete(item)}
-                      disabled={deletingId === item._id}
-                      style={{
-                        flex: 1,
-                        background: "#381919",
-                        color: "#ff9999",
-                        border: "1px solid #713333",
-                        padding: "11px",
-                        borderRadius: "8px",
-                        fontWeight: "bold",
-                        cursor:
-                          deletingId === item._id
-                            ? "not-allowed"
-                            : "pointer",
-                        opacity: deletingId === item._id ? 0.6 : 1,
-                      }}
+                  <div>
+                    <label style={labelStyle}>Model *</label>
+                    <input
+                      style={inputStyle}
+                      name="model"
+                      value={form.model}
+                      onChange={handleChange}
+                      placeholder="e.g. EOS 90D"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Location *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      name="location"
+                      value={form.location}
+                      onChange={handleChange}
+                      placeholder="e.g. Dhaka, Bangladesh"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Rental Price *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      type="number"
+                      name="rentalPrice"
+                      value={form.rentalPrice}
+                      onChange={handleChange}
+                      placeholder="Enter price"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Rental Type *
+                    </label>
+                    <select
+                      style={inputStyle}
+                      name="rentalType"
+                      value={form.rentalType}
+                      onChange={handleChange}
+                      required
                     >
-                      {deletingId === item._id ? "Deleting..." : "Delete"}
-                    </button>
+                      <option value="Daily">Daily</option>
+                      <option value="Weekly">Weekly</option>
+                      <option value="Monthly">Monthly</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Available Quantity *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      type="number"
+                      name="availableQuantity"
+                      value={form.availableQuantity}
+                      onChange={handleChange}
+                      placeholder="Enter quantity"
+                      min="0"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Condition *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      name="condition"
+                      value={form.condition}
+                      onChange={handleChange}
+                      placeholder="e.g. Excellent / Good"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label style={labelStyle}>
+                      Image URL *
+                    </label>
+                    <input
+                      style={inputStyle}
+                      type="url"
+                      name="imageUrl"
+                      value={form.imageUrl}
+                      onChange={handleChange}
+                      placeholder="https://example.com/image.jpg"
+                      required
+                    />
                   </div>
                 </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+
+                <div style={{ marginTop: "20px" }}>
+                  <label style={labelStyle}>
+                    Description *
+                  </label>
+                  <textarea
+                    style={{
+                      ...inputStyle,
+                      minHeight: "100px",
+                      resize: "vertical",
+                    }}
+                    name="description"
+                    value={form.description}
+                    onChange={handleChange}
+                    placeholder="Describe your equipment..."
+                    required
+                  />
+                </div>
+
+                <div style={{ marginTop: "20px" }}>
+                  <label style={labelStyle}>
+                    Rental Terms *
+                  </label>
+                  <textarea
+                    style={{
+                      ...inputStyle,
+                      minHeight: "100px",
+                      resize: "vertical",
+                    }}
+                    name="rentalTerms"
+                    value={form.rentalTerms}
+                    onChange={handleChange}
+                    placeholder="Write your rental terms and conditions..."
+                    required
+                  />
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginTop: "22px",
+                  }}
+                >
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      ...buttonStyle,
+                      opacity: submitting ? 0.6 : 1,
+                      cursor: submitting
+                        ? "not-allowed"
+                        : "pointer",
+                    }}
+                  >
+                    {submitting
+                      ? "Saving..."
+                      : editingId
+                        ? "Update Equipment"
+                        : "Submit Equipment"}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    disabled={submitting}
+                    style={secondaryButtonStyle}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* EQUIPMENT LIST */}
+          {loading ? (
+            <div style={cardStyle}>
+              <p style={{ color: "var(--accent, #c9f269)" }}>
+                Loading your equipment...
+              </p>
+            </div>
+          ) : equipment.length === 0 ? (
+            <div
+              style={{
+                ...cardStyle,
+                textAlign: "center",
+                padding: "45px 20px",
+              }}
+            >
+              <h3>No Equipment Found</h3>
+
+              <p
+                style={{
+                  color: "var(--muted, #999)",
+                  lineHeight: 1.7,
+                }}
+              >
+                You have not added any equipment yet. Click
+                the Add Equipment button to submit your first
+                item.
+              </p>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(250px, 1fr))",
+                gap: "22px",
+              }}
+            >
+              {equipment.map((item) => (
+                <article
+                  key={item._id}
+                  style={{
+                    ...cardStyle,
+                    padding: 0,
+                    overflow: "hidden",
+                  }}
+                >
+                  {item.imageUrl && (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.equipmentName}
+                      style={{
+                        width: "100%",
+                        height: "190px",
+                        objectFit: "cover",
+                        background: "#222",
+                      }}
+                    />
+                  )}
+
+                  <div style={{ padding: "20px" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: "10px",
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--accent, #c9f269)",
+                          letterSpacing: "1px",
+                        }}
+                      >
+                        {item.category}
+                      </span>
+
+                      <span
+                        style={{
+                          color: getStatusColor(item.status),
+                          background: "#252525",
+                          padding: "6px 10px",
+                          borderRadius: "20px",
+                          fontSize: "11px",
+                          fontWeight: "bold",
+                        }}
+                      >
+                        {item.status || "Pending"}
+                      </span>
+                    </div>
+
+                    <h3
+                      style={{
+                        fontSize: "21px",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      {item.equipmentName}
+                    </h3>
+
+                    <p
+                      style={{
+                        color: "var(--muted, #999)",
+                        fontSize: "13px",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      {item.description}
+                    </p>
+
+                    <div
+                      style={{
+                        borderTop: "1px solid var(--border, #333)",
+                        marginTop: "16px",
+                        paddingTop: "15px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          margin: "7px 0",
+                          color: "var(--foreground, #ccc)",
+                        }}
+                      >
+                        <strong
+                          style={{
+                            color: "var(--accent, #c9f269)",
+                          }}
+                        >
+                          ৳{item.rentalPrice}
+                        </strong>{" "}
+                        / {item.rentalType}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "7px 0",
+                          color: "var(--muted, #999)",
+                        }}
+                      >
+                        Location: {item.location}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "7px 0",
+                          color: "var(--muted, #999)",
+                        }}
+                      >
+                        Quantity: {item.availableQuantity}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "7px 0",
+                          color: "var(--muted, #999)",
+                        }}
+                      >
+                        Brand: {item.brand} {item.model}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "7px 0",
+                          color: "var(--muted, #999)",
+                        }}
+                      >
+                        Condition: {item.condition}
+                      </p>
+                    </div>
+
+                    {/* EDIT AND DELETE */}
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        marginTop: "20px",
+                      }}
+                    >
+                      <button
+                        onClick={() => handleEdit(item)}
+                        style={{
+                          ...buttonStyle,
+                          flex: 1,
+                          padding: "11px",
+                        }}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        onClick={() => handleDelete(item)}
+                        disabled={deletingId === item._id}
+                        style={{
+                          flex: 1,
+                          background: "#381919",
+                          color: "#ff9999",
+                          border: "1px solid #713333",
+                          padding: "11px",
+                          borderRadius: "8px",
+                          fontWeight: "bold",
+                          cursor:
+                            deletingId === item._id
+                              ? "not-allowed"
+                              : "pointer",
+                          opacity:
+                            deletingId === item._id ? 0.6 : 1,
+                        }}
+                      >
+                        {deletingId === item._id
+                          ? "Deleting..."
+                          : "Delete"}
+                      </button>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

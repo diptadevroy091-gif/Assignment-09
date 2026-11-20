@@ -5,10 +5,10 @@ const {
   createBooking,
   getMyBookings,
   getAllBookings,
+  deletePendingBooking,
 } = require("../controllers/bookingController");
 
 const verifyToken = require("../middleware/verifyToken");
-
 const {
   verifyAdmin,
   verifyCustomer,
@@ -16,13 +16,17 @@ const {
 
 const router = express.Router();
 
-// Create booking (Customer only)
+// Customer routes
 router.post("/", verifyToken, verifyCustomer, createBooking);
-
-// Get my bookings (Customer only)
 router.get("/my-bookings", verifyToken, verifyCustomer, getMyBookings);
 
-// Get all bookings (Admin only)
+// Admin routes
 router.get("/admin/all", verifyToken, verifyAdmin, getAllBookings);
+router.delete(
+  "/admin/:id",
+  verifyToken,
+  verifyAdmin,
+  deletePendingBooking
+);
 
 module.exports = router;

@@ -1,41 +1,27 @@
 
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import Navbar from "../components/Navbar";
 import "./equipment.css";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
 
 export default function EquipmentPage() {
   const [equipment, setEquipment] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All");
+  const [rentalType, setRentalType] = useState("All");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [availability, setAvailability] = useState("All");
   const [sort, setSort] = useState("newest");
-
-  useEffect(() => {
-    const fetchEquipment = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/equipment`);
-        const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || "Failed to load equipment");
-        }
-
-        setEquipment(result.data || []);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchEquipment();
-  }, []);
 
   const categories = [
     "All",
@@ -47,48 +33,72 @@ export default function EquipmentPage() {
     "Event Equipment",
   ];
 
-  const filteredEquipment = useMemo(() => {
-    let result = equipment.filter((item) => {
-      const text = search.toLowerCase();
+  const fetchEquipment = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError("");
 
-      const matchesSearch =
-        item.equipmentName?.toLowerCase().includes(text) ||
-        item.brand?.toLowerCase().includes(text) ||
-        item.location?.toLowerCase().includes(text);
+      const params = new URLSearchParams();
 
-      const matchesCategory =
-        category === "All" || item.category === category;
+      if (search.trim()) params.set("search", search.trim());
+      if (category !== "All") params.set("category", category);
+      if (rentalType !== "All") params.set("rentalType", rentalType);
+      if (minPrice !== "") params.set("minPrice", minPrice);
+      if (maxPrice !== "") params.set("maxPrice", maxPrice);
+      if (availability !== "All") {
+        params.set("availability", availability);
+      }
 
-      return matchesSearch && matchesCategory;
-    });
+      params.set("sort", sort);
 
-    if (sort === "low") {
-      result.sort((a, b) => a.rentalPrice - b.rentalPrice);
-    } else if (sort === "high") {
-      result.sort((a, b) => b.rentalPrice - a.rentalPrice);
-    } else {
-      result.sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      const response = await fetch(
+        `${API_URL}/api/equipment?${params.toString()}`,
+        { cache: "no-store" }
       );
-    }
 
-    return result;
-  }, [equipment, search, category, sort]);
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to load equipment");
+      }
+
+      setEquipment(result.data || []);
+    } catch (err) {
+      setError(err.message || "Something went wrong!");
+    } finally {
+      setLoading(false);
+    }
+  }, [
+    search,
+    category,
+    rentalType,
+    minPrice,
+    maxPrice,
+    availability,
+    sort,
+  ]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchEquipment();
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [fetchEquipment]);
+
+  const resetFilters = () => {
+    setSearch("");
+    setCategory("All");
+    setRentalType("All");
+    setMinPrice("");
+    setMaxPrice("");
+    setAvailability("All");
+    setSort("newest");
+  };
 
   return (
     <main className="equipment-page">
-      <nav className="equipment-nav">
-        <Link href="/" className="brand">
-          <span className="brand-icon">E</span>
-          equipora<span className="brand-dot">.</span>
-        </Link>
-
-        <div>
-          <Link href="/">Home</Link>
-          <Link href="/equipment">Equipment</Link>
-          <Link href="/login">Login</Link>
-        </div>
-      </nav>
+      <Navbar />
 
       <section className="equipment-banner">
         <span>OUR COLLECTION</span>
@@ -120,18 +130,59 @@ export default function EquipmentPage() {
           </select>
 
           <select
+            value={rentalType}
+            onChange={(e) => setRentalType(e.target.value)}
+          >
+            <option value="All">All Rental Types</option>
+            <option value="Hourly">Hourly</option>
+            <option value="Daily">Daily</option>
+            <option value="Weekly">Weekly</option>
+            <option value="Monthly">Monthly</option>
+          </select>
+
+          <input
+            type="number"
+            min="0"
+            placeholder="Min price"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+          />
+
+          <input
+            type="number"
+            min="0"
+            placeholder="Max price"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+          />
+
+          <select
+            value={availability}
+            onChange={(e) => setAvailability(e.target.value)}
+          >
+            <option value="All">All Availability</option>
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+          </select>
+
+          <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
             <option value="newest">Newest First</option>
+            <option value="oldest">Oldest First</option>
             <option value="low">Price: Low to High</option>
             <option value="high">Price: High to Low</option>
           </select>
+
+          <button type="button" onClick={resetFilters}>
+            Reset Filters
+          </button>
         </div>
 
         <div className="equipment-result-heading">
           <h2>Available Equipment</h2>
-          <span>{filteredEquipment.length} items found</span>
+          <span>{equipment.length} items found</span>
         </div>
 
         {loading && (
@@ -140,48 +191,55 @@ export default function EquipmentPage() {
           </div>
         )}
 
-        {error && (
+        {!loading && error && (
           <div className="equipment-message error-message">
             {error}
             <p>Make sure your backend server is running.</p>
+            <button onClick={fetchEquipment}>Try Again</button>
           </div>
         )}
 
-        {!loading && !error && filteredEquipment.length === 0 && (
+        {!loading && !error && equipment.length === 0 && (
           <div className="equipment-message">
-            No equipment found. Try another search.
+            No equipment found. Try changing your filters.
           </div>
         )}
 
         <div className="equipment-list-grid">
-          {filteredEquipment.map((item) => (
-            <article className="listing-card" key={item._id}>
-              <div className="listing-image">
-                <img
-                  src={item.imageUrl}
-                  alt={item.equipmentName}
-                />
-                <span>APPROVED</span>
-              </div>
-
-              <div className="listing-content">
-                <small>{item.category}</small>
-                <h3>{item.equipmentName}</h3>
-                <p>{item.location}</p>
-
-                <div className="listing-bottom">
-                  <div>
-                    <strong>৳{item.rentalPrice}</strong>
-                    <small> / {item.rentalType}</small>
-                  </div>
-
-                  <Link href={`/equipment/${item._id}`}>
-                    View Details ↗
-                  </Link>
+          {!loading &&
+            !error &&
+            equipment.map((item) => (
+              <article className="listing-card" key={item._id}>
+                <div className="listing-image">
+                  <img
+                    src={item.imageUrl || "/images/placeholder.png"}
+                    alt={item.equipmentName}
+                  />
+                  <span>APPROVED</span>
                 </div>
-              </div>
-            </article>
-          ))}
+
+                <div className="listing-content">
+                  <small>{item.category}</small>
+                  <h3>{item.equipmentName}</h3>
+                  <p>{item.location}</p>
+
+                  <p>
+                    Available Quantity: {item.availableQuantity}
+                  </p>
+
+                  <div className="listing-bottom">
+                    <div>
+                      <strong>৳{item.rentalPrice}</strong>
+                      <small> / {item.rentalType}</small>
+                    </div>
+
+                    <Link href={`/equipment/${item._id}`}>
+                      View Details ↗
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            ))}
         </div>
       </section>
     </main>

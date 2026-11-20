@@ -4,128 +4,794 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Navbar from "../../components/Navbar";
+import { useToast } from "../../components/ToastProvider";
+
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
 
 export default function CustomerDashboard() {
   const router = useRouter();
+  const { showToast } = useToast();
+
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [bookingError, setBookingError] = useState("");
+
+  const [favorites, setFavorites] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(true);
+  const [favoritesError, setFavoritesError] = useState("");
+  const [removingId, setRemovingId] = useState("");
+
+  // Load bookings and favorites
   useEffect(() => {
-    const token = localStorage.getItem("equipora-token");
-    const savedUser = localStorage.getItem("equipora-user");
+    const loadDashboard = async () => {
+      try {
+        const token =
+          localStorage.getItem("equipora-token") ||
+          localStorage.getItem("token");
 
-    if (!token || !savedUser) {
-      router.replace("/login");
-      return;
-    }
+        const savedUser = localStorage.getItem("equipora-user");
 
-    try {
-      setUser(JSON.parse(savedUser));
-    } catch {
-      localStorage.removeItem("equipora-token");
-      localStorage.removeItem("equipora-user");
-      router.replace("/login");
-    }
+        if (!token || !savedUser) {
+          router.replace("/login");
+          return;
+        }
+
+        const parsedUser = JSON.parse(savedUser);
+
+        if (parsedUser.role !== "Customer") {
+          if (parsedUser.role === "Admin") {
+            router.replace("/dashboard/admin");
+          } else if (parsedUser.role === "Owner") {
+            router.replace("/dashboard/owner");
+          } else {
+            router.replace("/");
+          }
+          return;
+        }
+
+        setUser(parsedUser);
+
+        // Load bookings
+        try {
+          const response = await fetch(
+            `${API_URL}/api/bookings/my-bookings`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              cache: "no-store",
+            }
+          );
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || "Could not load bookings.");
+          }
+
+          setBookings(Array.isArray(result.data) ? result.data : []);
+        } catch (error) {
+          console.error("Booking loading error:", error);
+          setBookingError(error.message || "Could not load your rentals.");
+        } finally {
+          setBookingsLoading(false);
+        }
+
+        // Load favorites
+        try {
+          const response = await fetch(
+            `${API_URL}/api/favorites/my-favorites`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+              cache: "no-store",
+            }
+          );
+
+          const result = await response.json();
+
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || "Could not load favorites.");
+          }
+
+          setFavorites(Array.isArray(result.data) ? result.data : []);
+          setFavoritesError("");
+        } catch (error) {
+          console.error("Favorites loading error:", error);
+          setFavoritesError(error.message || "Could not load favorites.");
+        } finally {
+          setFavoritesLoading(false);
+        }
+      } catch (error) {
+        console.error("Dashboard loading error:", error);
+        router.replace("/login");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadDashboard();
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("equipora-token");
-    localStorage.removeItem("equipora-user");
-    router.replace("/login");
+  // Remove favorite
+  const handleRemoveFavorite = async (equipmentId) => {
+    try {
+      const token =
+        localStorage.getItem("equipora-token") ||
+        localStorage.getItem("token");
+
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      setRemovingId(equipmentId);
+
+      const response = await fetch(
+        `${API_URL}/api/favorites/${equipmentId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Could not remove favorite.");
+      }
+
+      setFavorites((previous) =>
+        previous.filter(
+          (item) => item.equipmentId?._id !== equipmentId
+        )
+      );
+
+      showToast("Removed from your favorites!", "success");
+    } catch (error) {
+      console.error("Remove favorite error:", error);
+      showToast(error.message || "Failed to remove favorite.", "error");
+    } finally {
+      setRemovingId("");
+    }
   };
 
-  if (!user) {
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+
+    return new Date(date).toLocaleDateString("en-BD", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const statusStyle = (status) => {
+    const value = String(status || "Pending").toLowerCase();
+
+    if (
+      value === "paid" ||
+      value === "confirmed" ||
+      value === "completed"
+    ) {
+      return {
+        color: "#16a34a",
+        background: "rgba(22,163,74,0.12)",
+      };
+    }
+
+    if (value === "failed" || value === "cancelled") {
+      return {
+        color: "#dc2626",
+        background: "rgba(220,38,38,0.12)",
+      };
+    }
+
+    return {
+      color: "#d97706",
+      background: "rgba(217,119,6,0.12)",
+    };
+  };
+
+  if (loading || !user) {
     return (
-      <main style={{
-        minHeight: "100vh",
-        background: "#080808",
-        color: "#fff",
-        display: "grid",
-        placeItems: "center"
-      }}>
-        Loading your dashboard...
-      </main>
+      <div
+        style={{
+          minHeight: "100vh",
+          display: "grid",
+          placeItems: "center",
+          background: "var(--background)",
+          color: "var(--foreground)",
+        }}
+      >
+        Loading dashboard...
+      </div>
     );
   }
 
   return (
-    <main style={{
-      minHeight: "100vh",
-      background: "#080808",
-      color: "#fff",
-      padding: "40px 6%",
-      fontFamily: "Arial, sans-serif"
-    }}>
-      <header style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        gap: "20px",
-        flexWrap: "wrap",
-        borderBottom: "1px solid #292929",
-        paddingBottom: "24px"
-      }}>
-        <h2 style={{ margin: 0 }}>
-          Equipora <span style={{ color: "#c9f269" }}>.</span>
-        </h2>
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "var(--background)",
+        color: "var(--foreground)",
+      }}
+    >
+      <Navbar />
 
-        <button
-          onClick={handleLogout}
-          style={{
-            background: "#c9f269",
-            color: "#080808",
-            border: "none",
-            padding: "12px 22px",
-            borderRadius: "8px",
-            fontWeight: "bold",
-            cursor: "pointer"
-          }}
-        >
-          Logout
-        </button>
-      </header>
+      <section
+        style={{
+          maxWidth: "1100px",
+          margin: "0 auto",
+          padding: "55px 20px",
+        }}
+      >
+        {/* HEADER */}
+        <div style={{ marginBottom: "30px" }}>
+          <span
+            style={{
+              color: "var(--accent-text)",
+              background: "var(--accent)",
+              padding: "8px 14px",
+              borderRadius: "20px",
+              fontSize: "12px",
+              fontWeight: "800",
+              letterSpacing: "1px",
+            }}
+          >
+            CUSTOMER DASHBOARD
+          </span>
 
-      <section style={{ marginTop: "65px" }}>
-        <p style={{ color: "#c9f269", letterSpacing: "2px" }}>
-          CUSTOMER DASHBOARD
-        </p>
+          <h1
+            style={{
+              fontSize: "clamp(28px, 5vw, 42px)",
+              fontWeight: "800",
+              marginTop: "22px",
+              marginBottom: "12px",
+            }}
+          >
+            Welcome, {user.name}!
+          </h1>
 
-        <h1 style={{ fontSize: "clamp(30px, 5vw, 48px)" }}>
-          Welcome, {user.name || "Customer"}!
-        </h1>
-
-        <p style={{ color: "#aaa", lineHeight: 1.8 }}>
-          You are successfully logged in to your Equipora account.
-        </p>
-
-        <div style={{
-          marginTop: "35px",
-          padding: "28px",
-          background: "#151515",
-          border: "1px solid #292929",
-          borderRadius: "14px",
-          maxWidth: "550px"
-        }}>
-          <h3>Account Information</h3>
-          <p><strong>Name:</strong> {user.name}</p>
-          <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Role:</strong> {user.role}</p>
+          <p style={{ color: "var(--muted)", lineHeight: "1.7" }}>
+            Manage your rentals, favorites, and account information.
+          </p>
         </div>
 
-        <Link
-          href="/equipment"
+        {/* QUICK LINKS */}
+        <div
           style={{
-            display: "inline-block",
-            marginTop: "30px",
-            background: "#c9f269",
-            color: "#080808",
-            padding: "14px 24px",
-            borderRadius: "8px",
-            textDecoration: "none",
-            fontWeight: "bold"
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+            gap: "15px",
+            marginBottom: "35px",
           }}
         >
-          Browse Equipment →
-        </Link>
+          {[
+            {
+              title: "Browse Equipment",
+              description: "Find equipment to rent",
+              href: "/equipment",
+              icon: "🔍",
+            },
+            {
+              title: "My Favorites",
+              description: "View your saved equipment",
+              href: "/wishlist",
+              icon: "❤️",
+            },
+            {
+              title: "My Profile",
+              description: "Manage your account",
+              href: "/profile",
+              icon: "👤",
+            },
+          ].map((item) => (
+            <Link
+              key={item.title}
+              href={item.href}
+              style={{
+                padding: "22px",
+                borderRadius: "16px",
+                background: "var(--surface-card)",
+                border: "1px solid var(--border)",
+                color: "var(--foreground)",
+                textDecoration: "none",
+              }}
+            >
+              <div style={{ fontSize: "27px", marginBottom: "12px" }}>
+                {item.icon}
+              </div>
+
+              <h3 style={{ fontWeight: "800", marginBottom: "7px" }}>
+                {item.title}
+              </h3>
+
+              <p style={{ color: "var(--muted)", fontSize: "13px" }}>
+                {item.description}
+              </p>
+            </Link>
+          ))}
+        </div>
+
+        {/* MY FAVORITES */}
+        <div
+          style={{
+            background: "var(--surface-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "18px",
+            padding: "25px",
+            marginBottom: "30px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+              marginBottom: "22px",
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: "23px", fontWeight: "800" }}>
+                ❤️ My Favorites
+              </h2>
+
+              <p
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                }}
+              >
+                Your saved equipment collection
+              </p>
+            </div>
+
+            <span
+              style={{
+                padding: "7px 13px",
+                borderRadius: "20px",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                fontSize: "13px",
+                fontWeight: "700",
+              }}
+            >
+              {favorites.length} Saved
+            </span>
+          </div>
+
+          {favoritesLoading ? (
+            <p style={{ color: "var(--muted)" }}>
+              Loading your favorites...
+            </p>
+          ) : favoritesError ? (
+            <p style={{ color: "#dc2626" }}>
+              {favoritesError}
+            </p>
+          ) : favorites.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "35px 10px" }}>
+              <p style={{ fontSize: "38px", marginBottom: "12px" }}>
+                ♡
+              </p>
+
+              <h3 style={{ fontWeight: "800", marginBottom: "8px" }}>
+                No favorites yet
+              </h3>
+
+              <p style={{ color: "var(--muted)", marginBottom: "18px" }}>
+                Explore equipment and save your favorites here.
+              </p>
+
+              <Link
+                href="/equipment"
+                style={{
+                  display: "inline-block",
+                  padding: "12px 20px",
+                  borderRadius: "25px",
+                  background: "var(--accent)",
+                  color: "var(--accent-text)",
+                  textDecoration: "none",
+                  fontWeight: "800",
+                }}
+              >
+                Browse Equipment →
+              </Link>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+                gap: "18px",
+              }}
+            >
+              {favorites.map((favorite) => {
+                const equipment = favorite.equipmentId;
+
+                if (!equipment) return null;
+
+                return (
+                  <div
+                    key={favorite._id}
+                    style={{
+                      border: "1px solid var(--border)",
+                      borderRadius: "15px",
+                      overflow: "hidden",
+                      background: "var(--surface)",
+                    }}
+                  >
+                    <img
+                      src={equipment.imageUrl || "/placeholder.png"}
+                      alt={equipment.equipmentName || "Equipment"}
+                      style={{
+                        width: "100%",
+                        height: "175px",
+                        objectFit: "cover",
+                        display: "block",
+                      }}
+                    />
+
+                    <div style={{ padding: "17px" }}>
+                      <p
+                        style={{
+                          color: "var(--accent)",
+                          fontSize: "11px",
+                          fontWeight: "800",
+                          marginBottom: "8px",
+                        }}
+                      >
+                        {equipment.category || "Equipment"}
+                      </p>
+
+                      <h3
+                        style={{
+                          fontSize: "17px",
+                          fontWeight: "800",
+                          marginBottom: "9px",
+                        }}
+                      >
+                        {equipment.equipmentName}
+                      </h3>
+
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: "13px",
+                          marginBottom: "12px",
+                        }}
+                      >
+                        📍 {equipment.location || "Location not available"}
+                      </p>
+
+                      <p
+                        style={{
+                          fontWeight: "800",
+                          fontSize: "18px",
+                          marginBottom: "16px",
+                        }}
+                      >
+                        ৳{Number(equipment.rentalPrice || 0).toLocaleString("en-BD")}
+                        <span
+                          style={{
+                            color: "var(--muted)",
+                            fontSize: "12px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {" "}
+                          / {equipment.rentalType || "Rental"}
+                        </span>
+                      </p>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "9px",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <Link
+                          href={`/equipment/${equipment._id}`}
+                          style={{
+                            flex: "1",
+                            textAlign: "center",
+                            padding: "10px",
+                            borderRadius: "9px",
+                            background: "var(--accent)",
+                            color: "var(--accent-text)",
+                            textDecoration: "none",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                          }}
+                        >
+                          View Details →
+                        </Link>
+
+                        <button
+                          type="button"
+                          disabled={removingId === equipment._id}
+                          onClick={() =>
+                            handleRemoveFavorite(equipment._id)
+                          }
+                          style={{
+                            padding: "10px 12px",
+                            borderRadius: "9px",
+                            border: "1px solid var(--border)",
+                            background: "transparent",
+                            color: "#dc2626",
+                            fontWeight: "700",
+                            cursor: "pointer",
+                            opacity:
+                              removingId === equipment._id ? 0.6 : 1,
+                          }}
+                        >
+                          {removingId === equipment._id
+                            ? "Removing..."
+                            : "Remove"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* MY RENTALS */}
+        <div
+          style={{
+            background: "var(--surface-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "18px",
+            padding: "25px",
+            marginBottom: "30px",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "12px",
+              marginBottom: "22px",
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: "23px", fontWeight: "800" }}>
+                My Rentals
+              </h2>
+
+              <p
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                }}
+              >
+                Your booking and payment history
+              </p>
+            </div>
+
+            <span
+              style={{
+                padding: "7px 13px",
+                borderRadius: "20px",
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                fontSize: "13px",
+                fontWeight: "700",
+              }}
+            >
+              {bookings.length} Bookings
+            </span>
+          </div>
+
+          {bookingsLoading ? (
+            <p style={{ color: "var(--muted)" }}>
+              Loading your rentals...
+            </p>
+          ) : bookingError ? (
+            <p style={{ color: "#dc2626" }}>{bookingError}</p>
+          ) : bookings.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "35px 10px" }}>
+              <p style={{ fontSize: "35px", marginBottom: "12px" }}>
+                📦
+              </p>
+
+              <h3 style={{ fontWeight: "800", marginBottom: "8px" }}>
+                No rentals yet
+              </h3>
+
+              <p style={{ color: "var(--muted)", marginBottom: "18px" }}>
+                Browse equipment and make your first booking.
+              </p>
+
+              <Link
+                href="/equipment"
+                style={{
+                  display: "inline-block",
+                  padding: "12px 20px",
+                  borderRadius: "25px",
+                  background: "var(--accent)",
+                  color: "var(--accent-text)",
+                  textDecoration: "none",
+                  fontWeight: "800",
+                }}
+              >
+                Browse Equipment →
+              </Link>
+            </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  minWidth: "720px",
+                  borderCollapse: "collapse",
+                  textAlign: "left",
+                }}
+              >
+                <thead>
+                  <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                    {[
+                      "Equipment",
+                      "Rental Period",
+                      "Booking Date",
+                      "Amount",
+                      "Payment",
+                      "Booking Status",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        style={{
+                          padding: "14px 12px",
+                          color: "var(--muted)",
+                          fontSize: "12px",
+                        }}
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {bookings.map((booking) => (
+                    <tr
+                      key={booking._id}
+                      style={{ borderBottom: "1px solid var(--border)" }}
+                    >
+                      <td style={{ padding: "16px 12px", fontWeight: "700" }}>
+                        {booking.equipmentId?.equipmentName || "Equipment"}
+                      </td>
+
+                      <td style={{ padding: "16px 12px", fontSize: "13px" }}>
+                        {formatDate(booking.startDate)}
+                        <br />
+                        to {formatDate(booking.endDate)}
+                      </td>
+
+                      <td style={{ padding: "16px 12px", fontSize: "13px" }}>
+                        {formatDate(booking.createdAt)}
+                      </td>
+
+                      <td style={{ padding: "16px 12px", fontWeight: "800" }}>
+                        ৳{Number(booking.totalAmount || 0).toLocaleString("en-BD")}
+                      </td>
+
+                      <td style={{ padding: "16px 12px" }}>
+                        <span
+                          style={{
+                            ...statusStyle(booking.paymentStatus),
+                            padding: "6px 10px",
+                            borderRadius: "20px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                          }}
+                        >
+                          {booking.paymentStatus || "Pending"}
+                        </span>
+                      </td>
+
+                      <td style={{ padding: "16px 12px" }}>
+                        <span
+                          style={{
+                            ...statusStyle(booking.bookingStatus),
+                            padding: "6px 10px",
+                            borderRadius: "20px",
+                            fontSize: "12px",
+                            fontWeight: "800",
+                          }}
+                        >
+                          {booking.bookingStatus || "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* ACCOUNT INFORMATION */}
+        <div
+          style={{
+            background: "var(--surface-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "18px",
+            padding: "28px",
+          }}
+        >
+          <h2
+            style={{
+              fontSize: "22px",
+              fontWeight: "800",
+              marginBottom: "24px",
+            }}
+          >
+            Account Information
+          </h2>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "24px",
+            }}
+          >
+            <div>
+              <p style={{ color: "var(--muted)", marginBottom: "8px" }}>
+                Name
+              </p>
+              <strong>{user.name}</strong>
+            </div>
+
+            <div>
+              <p style={{ color: "var(--muted)", marginBottom: "8px" }}>
+                Email
+              </p>
+              <strong style={{ overflowWrap: "anywhere" }}>
+                {user.email}
+              </strong>
+            </div>
+
+            <div>
+              <p style={{ color: "var(--muted)", marginBottom: "8px" }}>
+                Role
+              </p>
+              <strong>{user.role}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ marginTop: "25px" }}>
+          <Link
+            href="/"
+            style={{
+              color: "var(--muted)",
+              textDecoration: "none",
+              fontWeight: "700",
+            }}
+          >
+            ← Back to Home
+          </Link>
+        </div>
       </section>
     </main>
   );

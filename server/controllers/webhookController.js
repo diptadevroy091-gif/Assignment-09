@@ -3,7 +3,9 @@ const stripe = require("../utils/stripe");
 const Booking = require("../models/Booking");
 const Payment = require("../models/Payment");
 
-// Handle Stripe Webhook
+// ======================================
+// HANDLE STRIPE WEBHOOK
+// ======================================
 const handleStripeWebhook = async (req, res) => {
   try {
     if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
@@ -25,18 +27,23 @@ const handleStripeWebhook = async (req, res) => {
         process.env.STRIPE_WEBHOOK_SECRET
       );
     } catch (error) {
+      console.error("Webhook Signature Error:", error.message);
+
       return res.status(400).send(
         `Webhook Error: ${error.message}`
       );
     }
 
-    // Handle successful payment
+    // ======================================
+    // PAYMENT SUCCESS
+    // ======================================
     if (
       event.type === "checkout.session.completed" ||
       event.type === "checkout.session.async_payment_succeeded"
     ) {
       const session = event.data.object;
 
+      // Confirm payment is actually completed
       if (session.payment_status !== "paid") {
         return res.status(200).json({
           received: true,
@@ -53,6 +60,7 @@ const handleStripeWebhook = async (req, res) => {
         });
       }
 
+      // Find booking
       const booking = await Booking.findById(bookingId);
 
       if (!booking) {
@@ -62,7 +70,7 @@ const handleStripeWebhook = async (req, res) => {
         });
       }
 
-      // Verify session belongs to this booking
+      // Verify Stripe session
       if (booking.stripeSessionId !== session.id) {
         return res.status(400).json({
           success: false,
@@ -81,50 +89,117 @@ const handleStripeWebhook = async (req, res) => {
         });
       }
 
-      // Update booking after successful payment
-      booking.paymentStatus = "Paid";
-      booking.bookingStatus = "Confirmed";
+      // Verify customer
+      if (
+        session.metadata?.customerId &&
+        session.metadata.customerId !== booking.customerInfo.userId
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Payment customer does not match booking!",
+        });
+      }
 
-      await booking.save();
+      // ======================================
+      // UPDATE BOOKING
+      // ======================================
+      if (booking.paymentStatus !== "Paid") {
+        booking.paymentStatus = "Paid";
+        booking.bookingStatus = "Confirmed";
 
-      // Save payment transaction
+        await booking.save();
+      }
+
+      // ======================================
+      // UPDATE OR CREATE PAYMENT RECORD
+      // ======================================
+      const paymentIntentId =
+        typeof session.payment_intent === "string"
+          ? session.payment_intent
+          : session.payment_intent?.id || "";
+
       await Payment.findOneAndUpdate(
-        { stripeSessionId: session.id },
         {
-          $setOnInsert: {
+          stripeSessionId: session.id,
+        },
+        {
+          $set: {
             bookingId: booking._id,
             customerId: booking.customerInfo.userId,
             customerEmail: booking.customerInfo.email,
             amount: session.amount_total / 100,
             currency: session.currency || "usd",
-            stripeSessionId: session.id,
-            transactionId:
-              typeof session.payment_intent === "string"
-                ? session.payment_intent
-                : session.payment_intent?.id || "",
+            transactionId: paymentIntentId,
             paymentStatus: "Paid",
           },
         },
         {
           upsert: true,
           new: true,
+          runValidators: true,
         }
+      );
+
+      console.log(
+        `Payment successful for booking: ${booking._id}`
       );
     }
 
-    res.status(200).json({
+    // ======================================
+    // PAYMENT FAILED / EXPIRED
+    // ======================================
+    if (event.type === "checkout.session.expired") {
+      const session = event.data.object;
+
+      await Payment.findOneAndUpdate(
+        {
+          stripeSessionId: session.id,
+          paymentStatus: "Pending",
+        },
+        {
+          $set: {
+            paymentStatus: "Failed",
+          },
+        }
+      );
+
+      await Booking.findOneAndUpdate(
+        {
+          stripeSessionId: session.id,
+          paymentStatus: "Pending",
+        },
+        {
+          $set: {
+            paymentStatus: "Failed",
+            bookingStatus: "Cancelled",
+          },
+        }
+      );
+
+      console.log(
+        `Checkout session expired: ${session.id}`
+      );
+    }
+
+    return res.status(200).json({
       received: true,
     });
   } catch (error) {
-    console.error("Stripe webhook error:", error.message);
+    console.error(
+      "Stripe webhook error:",
+      error.message
+    );
 
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Webhook processing failed!",
     });
   }
 };
 
+// ======================================
+// EXPORT
+// ======================================
 module.exports = {
   handleStripeWebhook,
 };

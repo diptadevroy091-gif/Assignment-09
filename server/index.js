@@ -4,7 +4,6 @@ const cors = require("cors");
 require("dotenv").config();
 
 const connectDB = require("./config/db");
-
 const { passport } = require("./config/passport");
 
 const equipmentRoutes = require("./routes/equipmentRoutes");
@@ -17,10 +16,26 @@ const favoriteRoutes = require("./routes/favoriteRoutes");
 
 const app = express();
 
+// Allowed Frontend Origins
+const allowedOrigins = [
+  "http://localhost:3000",
+  "https://assignment-09-wheat.vercel.app",
+  "https://assignment-09-git-main-diptadevroy091-gif.vercel.app",
+  "https://assignment-09-dl7l0ypmb-diptadevroy091-gif.vercel.app",
+  process.env.CLIENT_URL,
+].filter(Boolean);
+
 // CORS Middleware
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
   })
 );
 

@@ -26,45 +26,80 @@ export default function AdminDashboard() {
   const styles = {
     page: {
       minHeight: "100vh",
-      background: "var(--background, #080808)",
-      color: "var(--foreground, #ffffff)",
+      background: "var(--background)",
+      color: "var(--foreground)",
       padding: "35px 6%",
       fontFamily: "Arial, sans-serif",
     },
+
     card: {
-      background: "var(--surface-card, #151515)",
-      color: "var(--foreground, #ffffff)",
-      border: "1px solid var(--border, #292929)",
+      background: "var(--surface-card)",
+      color: "var(--foreground)",
+      border: "1px solid var(--border)",
       borderRadius: "14px",
       padding: "24px",
+      boxShadow: "var(--shadow)",
     },
-    muted: { color: "var(--muted, #999999)" },
-    accent: { color: "var(--accent-text, #c9f269)" },
+
+    heading: {
+      color: "var(--foreground)",
+    },
+
+    muted: {
+      color: "var(--muted)",
+    },
+
+    accent: {
+      color: "#729b25",
+      fontWeight: "700",
+    },
+
     primaryButton: {
-      background: "var(--accent, #c9f269)",
-      color: "var(--accent-text, #080808)",
+      background: "var(--accent)",
+      color: "#151811",
       border: "none",
       padding: "12px 22px",
       borderRadius: "8px",
       fontWeight: "bold",
       cursor: "pointer",
     },
+
     sectionTitle: {
       fontSize: "26px",
       marginBottom: "20px",
-      color: "var(--foreground, #ffffff)",
+      color: "var(--foreground)",
     },
+
     quickLink: {
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "var(--accent, #c9f269)",
-      color: "var(--accent-text, #080808)",
+      background: "var(--accent)",
+      color: "#151811",
       padding: "12px 18px",
       borderRadius: "9px",
       fontWeight: "bold",
       textDecoration: "none",
-      transition: "0.2s ease",
+    },
+
+    infoBox: {
+      borderTop: "1px solid var(--border)",
+      borderBottom: "1px solid var(--border)",
+      padding: "12px 0",
+      margin: "15px 0",
+    },
+
+    statusBadge: {
+      background: "var(--surface)",
+      border: "1px solid var(--border)",
+      padding: "7px 11px",
+      borderRadius: "20px",
+      fontSize: "12px",
+      fontWeight: "bold",
+    },
+
+    normalText: {
+      color: "var(--foreground)",
     },
   };
 
@@ -155,7 +190,6 @@ export default function AdminDashboard() {
     }
   }, [router, fetchAllEquipment, fetchAllBookings]);
 
-  // Equipment status update
   const handleStatusUpdate = async (id, status) => {
     const token = localStorage.getItem("equipora-token");
 
@@ -198,7 +232,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // Delete unpaid pending booking
   const handleDeleteBooking = async (booking) => {
     if (
       booking.paymentStatus !== "Pending" ||
@@ -252,14 +285,14 @@ export default function AdminDashboard() {
 
   const getStatusColor = (status) => {
     if (["Approved", "Paid", "Confirmed"].includes(status)) {
-      return "#219653";
+      return "#16a34a";
     }
 
     if (["Rejected", "Failed", "Cancelled"].includes(status)) {
-      return "#e05252";
+      return "#dc2626";
     }
 
-    return "#d69e22";
+    return "#b7791f";
   };
 
   const formatDate = (date) => {
@@ -279,8 +312,8 @@ export default function AdminDashboard() {
         <main
           style={{
             minHeight: "100vh",
-            background: "var(--background, #080808)",
-            color: "var(--foreground, #ffffff)",
+            background: "var(--background)",
+            color: "var(--foreground)",
             display: "grid",
             placeItems: "center",
           }}
@@ -309,6 +342,10 @@ export default function AdminDashboard() {
       item.bookingStatus === "Pending"
   ).length;
 
+  const paidBookings = bookings.filter(
+    (item) => item.paymentStatus === "Paid"
+  ).length;
+
   return (
     <>
       <Navbar />
@@ -318,7 +355,7 @@ export default function AdminDashboard() {
         <section style={{ marginTop: "25px" }}>
           <p
             style={{
-              ...styles.accent,
+              color: "#729b25",
               letterSpacing: "2px",
               fontSize: "12px",
               fontWeight: "bold",
@@ -327,7 +364,13 @@ export default function AdminDashboard() {
             ADMIN CONTROL CENTER
           </p>
 
-          <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", margin: "12px 0" }}>
+          <h1
+            style={{
+              ...styles.heading,
+              fontSize: "clamp(30px, 5vw, 46px)",
+              margin: "12px 0",
+            }}
+          >
             Welcome, {user.name || "Admin"}!
           </h1>
 
@@ -335,7 +378,6 @@ export default function AdminDashboard() {
             Manage and monitor your Equipora platform from one place.
           </p>
 
-          {/* Admin Quick Actions */}
           <div
             style={{
               display: "flex",
@@ -357,6 +399,7 @@ export default function AdminDashboard() {
             </Link>
           </div>
 
+          {/* Admin Information */}
           <div
             style={{
               display: "grid",
@@ -367,17 +410,19 @@ export default function AdminDashboard() {
           >
             <div style={styles.card}>
               <p style={styles.muted}>Account Type</p>
-              <h2 style={styles.accent}>Administrator</h2>
+              <h2 style={styles.heading}>Administrator</h2>
             </div>
 
             <div style={styles.card}>
               <p style={styles.muted}>Admin Name</p>
-              <h2>{user.name || "Admin"}</h2>
+              <h2 style={styles.heading}>{user.name || "Admin"}</h2>
             </div>
 
             <div style={styles.card}>
               <p style={styles.muted}>Admin Email</p>
-              <h3 style={{ overflowWrap: "anywhere" }}>{user.email}</h3>
+              <h3 style={{ ...styles.heading, overflowWrap: "anywhere" }}>
+                {user.email}
+              </h3>
             </div>
           </div>
         </section>
@@ -394,14 +439,14 @@ export default function AdminDashboard() {
             }}
           >
             {[
-              ["Total Equipment", equipment.length, styles.accent],
-              ["Pending", pendingCount, { color: "#d69e22" }],
-              ["Approved", approvedCount, { color: "#219653" }],
-              ["Rejected", rejectedCount, { color: "#e05252" }],
-            ].map(([label, value, colorStyle]) => (
+              ["Total Equipment", equipment.length, "#729b25"],
+              ["Pending", pendingCount, "#b7791f"],
+              ["Approved", approvedCount, "#16a34a"],
+              ["Rejected", rejectedCount, "#dc2626"],
+            ].map(([label, value, color]) => (
               <div key={label} style={styles.card}>
                 <p style={styles.muted}>{label}</p>
-                <h1 style={{ fontSize: "34px", ...colorStyle }}>{value}</h1>
+                <h1 style={{ fontSize: "34px", color }}>{value}</h1>
               </div>
             ))}
           </div>
@@ -423,6 +468,7 @@ export default function AdminDashboard() {
               <h2 style={{ ...styles.sectionTitle, marginBottom: "8px" }}>
                 Equipment Management
               </h2>
+
               <p style={{ ...styles.muted, margin: 0 }}>
                 Review and manage equipment submitted by owners.
               </p>
@@ -434,7 +480,10 @@ export default function AdminDashboard() {
                 fetchAllEquipment(localStorage.getItem("equipora-token"))
               }
               disabled={loading}
-              style={styles.primaryButton}
+              style={{
+                ...styles.primaryButton,
+                opacity: loading ? 0.6 : 1,
+              }}
             >
               {loading ? "Refreshing..." : "Refresh List"}
             </button>
@@ -455,7 +504,11 @@ export default function AdminDashboard() {
               {equipment.map((item) => (
                 <article
                   key={item._id}
-                  style={{ ...styles.card, padding: 0, overflow: "hidden" }}
+                  style={{
+                    ...styles.card,
+                    padding: 0,
+                    overflow: "hidden",
+                  }}
                 >
                   {item.imageUrl && (
                     <img
@@ -475,43 +528,77 @@ export default function AdminDashboard() {
                         display: "flex",
                         justifyContent: "space-between",
                         gap: "10px",
+                        flexWrap: "wrap",
                       }}
                     >
                       <span style={styles.accent}>{item.category}</span>
+
                       <strong style={{ color: getStatusColor(item.status) }}>
                         {item.status || "Pending"}
                       </strong>
                     </div>
 
-                    <h3>{item.equipmentName}</h3>
+                    <h3 style={styles.heading}>
+                      {item.equipmentName}
+                    </h3>
 
-                    <p style={{ ...styles.muted, fontSize: "13px", lineHeight: 1.6 }}>
+                    <p
+                      style={{
+                        ...styles.muted,
+                        fontSize: "13px",
+                        lineHeight: 1.7,
+                      }}
+                    >
                       {item.description}
                     </p>
 
-                    <div
-                      style={{
-                        borderTop: "1px solid var(--border, #333)",
-                        borderBottom: "1px solid var(--border, #333)",
-                        padding: "12px 0",
-                        margin: "15px 0",
-                      }}
-                    >
-                      <p>
-                        Price: <strong style={styles.accent}>৳{item.rentalPrice}</strong> / {item.rentalType}
+                    <div style={styles.infoBox}>
+                      <p style={styles.normalText}>
+                        Price:{" "}
+                        <strong style={{ color: "#729b25" }}>
+                          ৳{item.rentalPrice}
+                        </strong>{" "}
+                        / {item.rentalType}
                       </p>
-                      <p style={styles.muted}>Location: {item.location}</p>
-                      <p style={styles.muted}>Quantity: {item.availableQuantity}</p>
-                      <p style={styles.muted}>Brand: {item.brand} {item.model}</p>
-                      <p style={styles.muted}>Condition: {item.condition}</p>
-                      <p style={styles.muted}>Owner: {item.ownerInfo?.name || "Unknown"}</p>
-                      <p style={{ ...styles.muted, overflowWrap: "anywhere" }}>
+
+                      <p style={styles.muted}>
+                        Location: {item.location}
+                      </p>
+
+                      <p style={styles.muted}>
+                        Quantity: {item.availableQuantity}
+                      </p>
+
+                      <p style={styles.muted}>
+                        Brand: {item.brand} {item.model}
+                      </p>
+
+                      <p style={styles.muted}>
+                        Condition: {item.condition}
+                      </p>
+
+                      <p style={styles.muted}>
+                        Owner: {item.ownerInfo?.name || "Unknown"}
+                      </p>
+
+                      <p
+                        style={{
+                          ...styles.muted,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
                         Email: {item.ownerInfo?.email || "Unknown"}
                       </p>
                     </div>
 
-                    <p style={{ ...styles.muted, fontSize: "13px", lineHeight: 1.6 }}>
-                      <strong style={{ color: "var(--foreground)" }}>
+                    <p
+                      style={{
+                        ...styles.muted,
+                        fontSize: "13px",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      <strong style={styles.heading}>
                         Rental Terms:
                       </strong>{" "}
                       {item.rentalTerms}
@@ -528,10 +615,12 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         disabled={updatingId === item._id}
-                        onClick={() => handleStatusUpdate(item._id, "Approved")}
+                        onClick={() =>
+                          handleStatusUpdate(item._id, "Approved")
+                        }
                         style={{
-                          background: "#219653",
-                          color: "#fff",
+                          background: "#15803d",
+                          color: "#ffffff",
                           border: "none",
                           borderRadius: "7px",
                           padding: "11px 8px",
@@ -544,10 +633,12 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         disabled={updatingId === item._id}
-                        onClick={() => handleStatusUpdate(item._id, "Rejected")}
+                        onClick={() =>
+                          handleStatusUpdate(item._id, "Rejected")
+                        }
                         style={{
-                          background: "#e05252",
-                          color: "#fff",
+                          background: "#b91c1c",
+                          color: "#ffffff",
                           border: "none",
                           borderRadius: "7px",
                           padding: "11px 8px",
@@ -562,13 +653,15 @@ export default function AdminDashboard() {
                       <button
                         type="button"
                         disabled={updatingId === item._id}
-                        onClick={() => handleStatusUpdate(item._id, "Pending")}
+                        onClick={() =>
+                          handleStatusUpdate(item._id, "Pending")
+                        }
                         style={{
                           width: "100%",
                           marginTop: "10px",
-                          background: "transparent",
+                          background: "var(--surface)",
                           color: "var(--foreground)",
-                          border: "1px solid var(--border, #444)",
+                          border: "1px solid var(--border)",
                           borderRadius: "7px",
                           padding: "10px",
                           cursor: "pointer",
@@ -597,20 +690,20 @@ export default function AdminDashboard() {
           >
             <div style={styles.card}>
               <p style={styles.muted}>Total Bookings</p>
-              <h1 style={{ fontSize: "34px" }}>{bookings.length}</h1>
+              <h1 style={styles.heading}>{bookings.length}</h1>
             </div>
 
             <div style={styles.card}>
               <p style={styles.muted}>Pending Bookings</p>
-              <h1 style={{ color: "#d69e22", fontSize: "34px" }}>
+              <h1 style={{ color: "#b7791f", fontSize: "34px" }}>
                 {pendingBookings}
               </h1>
             </div>
 
             <div style={styles.card}>
               <p style={styles.muted}>Paid Bookings</p>
-              <h1 style={{ color: "#219653", fontSize: "34px" }}>
-                {bookings.filter((item) => item.paymentStatus === "Paid").length}
+              <h1 style={{ color: "#16a34a", fontSize: "34px" }}>
+                {paidBookings}
               </h1>
             </div>
           </div>
@@ -632,6 +725,7 @@ export default function AdminDashboard() {
               <h2 style={{ ...styles.sectionTitle, marginBottom: "8px" }}>
                 Booking Management
               </h2>
+
               <p style={{ ...styles.muted, margin: 0 }}>
                 View customer bookings and manage unpaid pending bookings.
               </p>
@@ -643,7 +737,10 @@ export default function AdminDashboard() {
               onClick={() =>
                 fetchAllBookings(localStorage.getItem("equipora-token"))
               }
-              style={styles.primaryButton}
+              style={{
+                ...styles.primaryButton,
+                opacity: bookingLoading ? 0.6 : 1,
+              }}
             >
               {bookingLoading ? "Refreshing..." : "Refresh Bookings"}
             </button>
@@ -653,7 +750,8 @@ export default function AdminDashboard() {
             <div style={styles.card}>Loading bookings...</div>
           ) : bookings.length === 0 ? (
             <div style={{ ...styles.card, textAlign: "center" }}>
-              <h3>No Bookings Found</h3>
+              <h3 style={styles.heading}>No Bookings Found</h3>
+
               <p style={styles.muted}>
                 Customer bookings will appear here.
               </p>
@@ -672,46 +770,64 @@ export default function AdminDashboard() {
                   booking.bookingStatus === "Pending";
 
                 const equipmentName =
-                  booking.equipmentId?.equipmentName || "Equipment unavailable";
+                  booking.equipmentId?.equipmentName ||
+                  "Equipment unavailable";
 
                 return (
                   <article key={booking._id} style={styles.card}>
                     <p style={styles.accent}>BOOKING DETAILS</p>
 
-                    <h3 style={{ marginTop: "8px" }}>{equipmentName}</h3>
+                    <h3
+                      style={{
+                        ...styles.heading,
+                        marginTop: "8px",
+                      }}
+                    >
+                      {equipmentName}
+                    </h3>
 
                     <div
                       style={{
-                        borderTop: "1px solid var(--border, #333)",
-                        borderBottom: "1px solid var(--border, #333)",
-                        padding: "12px 0",
-                        margin: "14px 0",
-                        lineHeight: 1.8,
+                        ...styles.infoBox,
+                        lineHeight: 1.9,
                       }}
                     >
-                      <p>
+                      <p style={styles.normalText}>
                         Customer:{" "}
                         <strong>
                           {booking.customerInfo?.name || "Unknown"}
                         </strong>
                       </p>
 
-                      <p style={{ ...styles.muted, overflowWrap: "anywhere" }}>
+                      <p
+                        style={{
+                          ...styles.muted,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
                         Email: {booking.customerInfo?.email || "N/A"}
                       </p>
 
-                      <p>
+                      <p style={styles.normalText}>
                         Rental Period: {formatDate(booking.startDate)} to{" "}
                         {formatDate(booking.endDate)}
                       </p>
 
-                      <p>Booking Date: {formatDate(booking.createdAt)}</p>
-                      <p>Quantity: {booking.quantity || 1}</p>
+                      <p style={styles.normalText}>
+                        Booking Date: {formatDate(booking.createdAt)}
+                      </p>
 
-                      <p>
+                      <p style={styles.normalText}>
+                        Quantity: {booking.quantity || 1}
+                      </p>
+
+                      <p style={styles.normalText}>
                         Amount:{" "}
-                        <strong style={styles.accent}>
-                          ৳{Number(booking.totalAmount || 0).toLocaleString("en-BD")}
+                        <strong style={{ color: "#729b25" }}>
+                          ৳
+                          {Number(booking.totalAmount || 0).toLocaleString(
+                            "en-BD"
+                          )}
                         </strong>
                       </p>
                     </div>
@@ -726,10 +842,7 @@ export default function AdminDashboard() {
                     >
                       <span
                         style={{
-                          background: "var(--surface, #252525)",
-                          padding: "7px 11px",
-                          borderRadius: "20px",
-                          fontSize: "12px",
+                          ...styles.statusBadge,
                           color: getStatusColor(booking.paymentStatus),
                         }}
                       >
@@ -738,10 +851,7 @@ export default function AdminDashboard() {
 
                       <span
                         style={{
-                          background: "var(--surface, #252525)",
-                          padding: "7px 11px",
-                          borderRadius: "20px",
-                          fontSize: "12px",
+                          ...styles.statusBadge,
                           color: getStatusColor(booking.bookingStatus),
                         }}
                       >
@@ -756,8 +866,8 @@ export default function AdminDashboard() {
                         onClick={() => handleDeleteBooking(booking)}
                         style={{
                           width: "100%",
-                          background: "#e05252",
-                          color: "#fff",
+                          background: "#b91c1c",
+                          color: "#ffffff",
                           border: "none",
                           borderRadius: "8px",
                           padding: "12px",
@@ -773,7 +883,7 @@ export default function AdminDashboard() {
                     ) : (
                       <p
                         style={{
-                          color: "#219653",
+                          color: "#16a34a",
                           fontSize: "13px",
                           fontWeight: "bold",
                           marginBottom: 0,

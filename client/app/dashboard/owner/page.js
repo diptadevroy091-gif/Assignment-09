@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Navbar from "../../components/Navbar";
 import { useToast } from "../../components/ToastProvider";
 
@@ -40,11 +41,9 @@ export default function OwnerDashboard() {
 
   const [user, setUser] = useState(null);
   const [equipment, setEquipment] = useState([]);
-
   const [form, setForm] = useState(initialForm);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
@@ -87,6 +86,7 @@ export default function OwnerDashboard() {
     cursor: "pointer",
     display: "inline-block",
     textAlign: "center",
+    textDecoration: "none",
   };
 
   const secondaryButtonStyle = {
@@ -99,7 +99,6 @@ export default function OwnerDashboard() {
     cursor: "pointer",
   };
 
-  // Fetch owner's equipment
   const fetchMyEquipment = async (token, showErrorToast = true) => {
     try {
       setLoading(true);
@@ -107,10 +106,7 @@ export default function OwnerDashboard() {
       const response = await fetch(
         `${API_BASE}/api/equipment/my-equipment`,
         {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
           cache: "no-store",
         }
       );
@@ -124,19 +120,18 @@ export default function OwnerDashboard() {
       setEquipment(result.data || []);
     } catch (err) {
       if (showErrorToast) {
-        showToast(
-          err.message || "Could not load your equipment.",
-          "error"
-        );
+        showToast(err.message || "Could not load your equipment.", "error");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  // Authentication and role check
   useEffect(() => {
-    const token = localStorage.getItem("equipora-token");
+    const token =
+      localStorage.getItem("equipora-token") ||
+      localStorage.getItem("token");
+
     const savedUser = localStorage.getItem("equipora-user");
 
     if (!token || !savedUser) {
@@ -160,31 +155,24 @@ export default function OwnerDashboard() {
       fetchMyEquipment(token);
     } catch {
       localStorage.removeItem("equipora-token");
+      localStorage.removeItem("token");
       localStorage.removeItem("equipora-user");
       router.replace("/login");
     }
   }, [router]);
 
-  // Form input change
   const handleChange = (e) => {
     const { name, value } = e.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    setForm((previous) => ({ ...previous, [name]: value }));
   };
 
-  // Open add form
   const openAddForm = () => {
     setEditingId(null);
     setForm(initialForm);
     setShowForm(true);
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Open edit form
   const handleEdit = (item) => {
     setEditingId(item._id);
 
@@ -207,24 +195,22 @@ export default function OwnerDashboard() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Close form
   const closeForm = () => {
     setShowForm(false);
     setEditingId(null);
     setForm(initialForm);
   };
 
-  // Add or update equipment
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
 
     try {
-      const token = localStorage.getItem("equipora-token");
+      const token =
+        localStorage.getItem("equipora-token") ||
+        localStorage.getItem("token");
 
-      if (!token) {
-        throw new Error("Please login again.");
-      }
+      if (!token) throw new Error("Please login again.");
 
       const equipmentData = {
         ...form,
@@ -270,12 +256,8 @@ export default function OwnerDashboard() {
     }
   };
 
-  // Open custom delete confirmation
-  const handleDelete = (item) => {
-    setItemToDelete(item);
-  };
+  const handleDelete = (item) => setItemToDelete(item);
 
-  // Confirm and delete equipment
   const confirmDelete = async () => {
     if (!itemToDelete) return;
 
@@ -283,19 +265,17 @@ export default function OwnerDashboard() {
     setDeletingId(item._id);
 
     try {
-      const token = localStorage.getItem("equipora-token");
+      const token =
+        localStorage.getItem("equipora-token") ||
+        localStorage.getItem("token");
 
-      if (!token) {
-        throw new Error("Please login again.");
-      }
+      if (!token) throw new Error("Please login again.");
 
       const response = await fetch(
         `${API_BASE}/api/equipment/my-equipment/${item._id}`,
         {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -307,15 +287,9 @@ export default function OwnerDashboard() {
 
       setItemToDelete(null);
 
-      if (editingId === item._id) {
-        closeForm();
-      }
+      if (editingId === item._id) closeForm();
 
-      showToast(
-        result.message || "Equipment deleted successfully!",
-        "success"
-      );
-
+      showToast(result.message || "Equipment deleted successfully!", "success");
       await fetchMyEquipment(token, false);
     } catch (err) {
       showToast(err.message || "Something went wrong.", "error");
@@ -324,7 +298,6 @@ export default function OwnerDashboard() {
     }
   };
 
-  // Equipment status color
   const getStatusColor = (status) => {
     if (status === "Approved") return "#9be7a5";
     if (status === "Rejected") return "#ff8585";
@@ -342,7 +315,6 @@ export default function OwnerDashboard() {
             color: "var(--foreground, #fff)",
             display: "grid",
             placeItems: "center",
-            fontFamily: "Arial, sans-serif",
           }}
         >
           Loading Owner Dashboard...
@@ -362,14 +334,7 @@ export default function OwnerDashboard() {
     >
       <Navbar />
 
-      <div
-        style={{
-          padding: "35px 6%",
-          maxWidth: "1600px",
-          margin: "0 auto",
-        }}
-      >
-        {/* Dashboard Introduction */}
+      <div style={{ padding: "35px 6%", maxWidth: "1600px", margin: "0 auto" }}>
         <section style={{ marginTop: "20px" }}>
           <p
             style={{
@@ -381,18 +346,41 @@ export default function OwnerDashboard() {
             EQUIPMENT OWNER PANEL
           </p>
 
-          <h1
-            style={{
-              fontSize: "clamp(30px, 5vw, 46px)",
-              marginBottom: "12px",
-            }}
-          >
+          <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", marginBottom: "12px" }}>
             Welcome, {user.name || "Owner"}!
           </h1>
 
           <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
             Manage your equipment rental business from your dashboard.
           </p>
+
+          {/* Dashboard Navigation */}
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              flexWrap: "wrap",
+              marginTop: "22px",
+            }}
+          >
+            <Link href="/dashboard/owner/analytics" style={buttonStyle}>
+              📊 Owner Analytics →
+            </Link>
+
+            <Link
+              href="/dashboard/owner/equipment"
+              style={secondaryButtonStyle}
+            >
+              🛠️ My Equipment
+            </Link>
+
+            <Link
+              href="/dashboard/owner/rentals"
+              style={secondaryButtonStyle}
+            >
+              📋 My Equipment Rentals
+            </Link>
+          </div>
 
           <div
             style={{
@@ -421,7 +409,6 @@ export default function OwnerDashboard() {
           </div>
         </section>
 
-        {/* Equipment Management */}
         <section style={{ marginTop: "45px" }}>
           <div
             style={{
@@ -437,7 +424,6 @@ export default function OwnerDashboard() {
               <h2 style={{ fontSize: "27px", marginBottom: "8px" }}>
                 My Equipment
               </h2>
-
               <p style={{ color: "var(--muted, #999)", margin: 0 }}>
                 Manage the equipment you have submitted.
               </p>
@@ -446,7 +432,10 @@ export default function OwnerDashboard() {
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button
                 onClick={() =>
-                  fetchMyEquipment(localStorage.getItem("equipora-token"))
+                  fetchMyEquipment(
+                    localStorage.getItem("equipora-token") ||
+                    localStorage.getItem("token")
+                  )
                 }
                 style={secondaryButtonStyle}
                 disabled={loading}
@@ -454,16 +443,12 @@ export default function OwnerDashboard() {
                 {loading ? "Refreshing..." : "Refresh List"}
               </button>
 
-              <button
-                onClick={showForm ? closeForm : openAddForm}
-                style={buttonStyle}
-              >
+              <button onClick={showForm ? closeForm : openAddForm} style={buttonStyle}>
                 {showForm ? "Close Form" : "+ Add Equipment"}
               </button>
             </div>
           </div>
 
-          {/* Add / Edit Form */}
           {showForm && (
             <div style={{ ...cardStyle, marginBottom: "30px" }}>
               <h2 style={{ marginTop: 0, marginBottom: "25px" }}>
@@ -485,17 +470,30 @@ export default function OwnerDashboard() {
                     gap: "20px",
                   }}
                 >
-                  <div>
-                    <label style={labelStyle}>Equipment Name *</label>
-                    <input
-                      style={inputStyle}
-                      name="equipmentName"
-                      value={form.equipmentName}
-                      onChange={handleChange}
-                      placeholder="e.g. Canon Camera"
-                      required
-                    />
-                  </div>
+                  {[
+                    ["equipmentName", "Equipment Name", "e.g. Canon Camera", "text"],
+                    ["brand", "Brand", "e.g. Canon", "text"],
+                    ["model", "Model", "e.g. EOS 90D", "text"],
+                    ["location", "Location", "e.g. Dhaka, Bangladesh", "text"],
+                    ["rentalPrice", "Rental Price", "Enter price", "number"],
+                    ["availableQuantity", "Available Quantity", "Enter quantity", "number"],
+                    ["condition", "Condition", "e.g. Excellent / Good", "text"],
+                    ["imageUrl", "Image URL", "https://example.com/image.jpg", "url"],
+                  ].map(([name, label, placeholder, type]) => (
+                    <div key={name}>
+                      <label style={labelStyle}>{label} *</label>
+                      <input
+                        style={inputStyle}
+                        type={type}
+                        name={name}
+                        value={form[name]}
+                        onChange={handleChange}
+                        placeholder={placeholder}
+                        min={type === "number" ? "0" : undefined}
+                        required
+                      />
+                    </div>
+                  ))}
 
                   <div>
                     <label style={labelStyle}>Category *</label>
@@ -516,56 +514,6 @@ export default function OwnerDashboard() {
                   </div>
 
                   <div>
-                    <label style={labelStyle}>Brand *</label>
-                    <input
-                      style={inputStyle}
-                      name="brand"
-                      value={form.brand}
-                      onChange={handleChange}
-                      placeholder="e.g. Canon"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Model *</label>
-                    <input
-                      style={inputStyle}
-                      name="model"
-                      value={form.model}
-                      onChange={handleChange}
-                      placeholder="e.g. EOS 90D"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Location *</label>
-                    <input
-                      style={inputStyle}
-                      name="location"
-                      value={form.location}
-                      onChange={handleChange}
-                      placeholder="e.g. Dhaka, Bangladesh"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Rental Price *</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      name="rentalPrice"
-                      value={form.rentalPrice}
-                      onChange={handleChange}
-                      placeholder="Enter price"
-                      min="0"
-                      required
-                    />
-                  </div>
-
-                  <div>
                     <label style={labelStyle}>Rental Type *</label>
                     <select
                       style={inputStyle}
@@ -578,45 +526,6 @@ export default function OwnerDashboard() {
                       <option value="Weekly">Weekly</option>
                       <option value="Monthly">Monthly</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Available Quantity *</label>
-                    <input
-                      style={inputStyle}
-                      type="number"
-                      name="availableQuantity"
-                      value={form.availableQuantity}
-                      onChange={handleChange}
-                      placeholder="Enter quantity"
-                      min="0"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Condition *</label>
-                    <input
-                      style={inputStyle}
-                      name="condition"
-                      value={form.condition}
-                      onChange={handleChange}
-                      placeholder="e.g. Excellent / Good"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label style={labelStyle}>Image URL *</label>
-                    <input
-                      style={inputStyle}
-                      type="url"
-                      name="imageUrl"
-                      value={form.imageUrl}
-                      onChange={handleChange}
-                      placeholder="https://example.com/image.jpg"
-                      required
-                    />
                   </div>
                 </div>
 
@@ -644,23 +553,8 @@ export default function OwnerDashboard() {
                   />
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    gap: "12px",
-                    flexWrap: "wrap",
-                    marginTop: "22px",
-                  }}
-                >
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    style={{
-                      ...buttonStyle,
-                      opacity: submitting ? 0.6 : 1,
-                      cursor: submitting ? "not-allowed" : "pointer",
-                    }}
-                  >
+                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "22px" }}>
+                  <button type="submit" disabled={submitting} style={{ ...buttonStyle, opacity: submitting ? 0.6 : 1 }}>
                     {submitting
                       ? "Saving..."
                       : editingId
@@ -668,12 +562,7 @@ export default function OwnerDashboard() {
                         : "Submit Equipment"}
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={closeForm}
-                    disabled={submitting}
-                    style={secondaryButtonStyle}
-                  >
+                  <button type="button" onClick={closeForm} disabled={submitting} style={secondaryButtonStyle}>
                     Cancel
                   </button>
                 </div>
@@ -681,7 +570,6 @@ export default function OwnerDashboard() {
             </div>
           )}
 
-          {/* Equipment List */}
           {loading ? (
             <div style={cardStyle}>
               <p style={{ color: "var(--accent, #c9f269)" }}>
@@ -689,13 +577,7 @@ export default function OwnerDashboard() {
               </p>
             </div>
           ) : equipment.length === 0 ? (
-            <div
-              style={{
-                ...cardStyle,
-                textAlign: "center",
-                padding: "45px 20px",
-              }}
-            >
+            <div style={{ ...cardStyle, textAlign: "center", padding: "45px 20px" }}>
               <h3>No Equipment Found</h3>
               <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
                 You have not added any equipment yet. Click the Add Equipment
@@ -738,13 +620,7 @@ export default function OwnerDashboard() {
                         flexWrap: "wrap",
                       }}
                     >
-                      <span
-                        style={{
-                          fontSize: "11px",
-                          color: "var(--accent, #c9f269)",
-                          letterSpacing: "1px",
-                        }}
-                      >
+                      <span style={{ fontSize: "11px", color: "var(--accent, #c9f269)", letterSpacing: "1px" }}>
                         {item.category}
                       </span>
 
@@ -766,53 +642,33 @@ export default function OwnerDashboard() {
                       {item.equipmentName}
                     </h3>
 
-                    <p
-                      style={{
-                        color: "var(--muted, #999)",
-                        fontSize: "13px",
-                        lineHeight: 1.6,
-                      }}
-                    >
+                    <p style={{ color: "var(--muted, #999)", fontSize: "13px", lineHeight: 1.6 }}>
                       {item.description}
                     </p>
 
-                    <div
-                      style={{
-                        borderTop: "1px solid var(--border, #333)",
-                        marginTop: "16px",
-                        paddingTop: "15px",
-                      }}
-                    >
-                      <p style={{ margin: "7px 0", color: "var(--foreground, #ccc)" }}>
+                    <div style={{ borderTop: "1px solid var(--border, #333)", marginTop: "16px", paddingTop: "15px" }}>
+                      <p style={{ margin: "7px 0" }}>
                         <strong style={{ color: "var(--accent, #c9f269)" }}>
                           ৳{item.rentalPrice}
                         </strong>{" "}
                         / {item.rentalType}
                       </p>
-
                       <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Location: {item.location}
                       </p>
-
                       <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Quantity: {item.availableQuantity}
                       </p>
-
                       <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Brand: {item.brand} {item.model}
                       </p>
-
                       <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
                         Condition: {item.condition}
                       </p>
                     </div>
 
-                    {/* Edit and Delete */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-                      <button
-                        onClick={() => handleEdit(item)}
-                        style={{ ...buttonStyle, flex: 1, padding: "11px" }}
-                      >
+                      <button onClick={() => handleEdit(item)} style={{ ...buttonStyle, flex: 1, padding: "11px" }}>
                         Edit
                       </button>
 
@@ -827,7 +683,7 @@ export default function OwnerDashboard() {
                           padding: "11px",
                           borderRadius: "8px",
                           fontWeight: "bold",
-                          cursor: deletingId === item._id ? "not-allowed" : "pointer",
+                          cursor: "pointer",
                           opacity: deletingId === item._id ? 0.6 : 1,
                         }}
                       >
@@ -842,7 +698,6 @@ export default function OwnerDashboard() {
         </section>
       </div>
 
-      {/* CUSTOM DELETE CONFIRMATION */}
       {itemToDelete && (
         <div
           onClick={() => {
@@ -906,11 +761,7 @@ export default function OwnerDashboard() {
                 type="button"
                 disabled={Boolean(deletingId)}
                 onClick={() => setItemToDelete(null)}
-                style={{
-                  ...secondaryButtonStyle,
-                  flex: 1,
-                  opacity: deletingId ? 0.5 : 1,
-                }}
+                style={{ ...secondaryButtonStyle, flex: 1 }}
               >
                 Cancel
               </button>
@@ -927,8 +778,7 @@ export default function OwnerDashboard() {
                   borderRadius: "8px",
                   padding: "11px",
                   fontWeight: "bold",
-                  cursor: deletingId ? "not-allowed" : "pointer",
-                  opacity: deletingId ? 0.6 : 1,
+                  cursor: "pointer",
                 }}
               >
                 {deletingId ? "Deleting..." : "Yes, Delete"}

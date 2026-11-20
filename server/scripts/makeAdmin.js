@@ -11,7 +11,7 @@ const makeAdmin = async () => {
     console.log("MongoDB Connected!");
 
     // Find your existing account by email
-    const email = "diptadevroy98@gmail.com";
+    const email = "diptadevroy36@gmail.com";
 
     const user = await User.findOne({ email });
 

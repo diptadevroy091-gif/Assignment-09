@@ -6,8 +6,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import "./auth.css";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+const API_URL = (
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
+).replace(/\/+$/, "");
+
+const readResponse = async (response) => {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error("Invalid response received from server.");
+  }
+};
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -25,21 +36,64 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState("");
 
   const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+    const { name, value } = e.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (error) setError("");
+    if (success) setSuccess("");
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     setError("");
     setSuccess("");
 
+    const name = form.name.trim();
+    const email = form.email.trim().toLowerCase();
+    const photoURL = form.photoURL.trim();
+    const password = form.password;
+
+    if (name.length < 2) {
+      setError("Name must contain at least 2 characters.");
+      return;
+    }
+
+    if (name.length > 80) {
+      setError("Name cannot exceed 80 characters.");
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (photoURL) {
+      try {
+        const parsedURL = new URL(photoURL);
+
+        if (!["http:", "https:"].includes(parsedURL.protocol)) {
+          throw new Error();
+        }
+      } catch {
+        setError("Please enter a valid profile photo URL.");
+        return;
+      }
+    }
+
     if (
-      form.password.length < 6 ||
-      !/[A-Z]/.test(form.password) ||
-      !/[a-z]/.test(form.password)
+      password.length < 6 ||
+      !/[A-Z]/.test(password) ||
+      !/[a-z]/.test(password)
     ) {
       setError(
         "Password must contain at least 6 characters, one uppercase and one lowercase letter."
@@ -55,22 +109,40 @@ export default function RegisterPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          name,
+          email,
+          photoURL,
+          password,
+        }),
       });
 
-      const result = await response.json();
+      const result = await readResponse(response);
 
-      if (!response.ok) {
-        throw new Error(result.message || "Registration failed!");
+      if (!response.ok || result.success === false) {
+        throw new Error(
+          result.message || "Registration failed. Please try again."
+        );
       }
 
-      setSuccess("Account created successfully! Redirecting to login...");
+      setSuccess(
+        "Account created successfully! Redirecting to login..."
+      );
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 1500);
+      setForm({
+        name: "",
+        email: "",
+        photoURL: "",
+        password: "",
+      });
+
+      router.push("/login");
     } catch (err) {
-      setError(err.message);
+      console.error("Registration error:", err);
+
+      setError(
+        err.message || "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -86,11 +158,13 @@ export default function RegisterPage() {
 
         <div className="auth-left-content">
           <span className="auth-eyebrow">JOIN THE COMMUNITY</span>
+
           <h1>
             Make room
             <br />
             for <span>better work.</span>
           </h1>
+
           <p>
             Create your Equipora account and discover a smarter
             way to rent and manage equipment.
@@ -109,16 +183,34 @@ export default function RegisterPage() {
 
         <div className="auth-form-container">
           <span className="auth-eyebrow">GET STARTED</span>
-          <h2>Create account<span>.</span></h2>
+
+          <h2>
+            Create account<span>.</span>
+          </h2>
+
           <p className="auth-subtitle">
             Fill in your details to join Equipora.
           </p>
 
-          {error && <div className="auth-error">{error}</div>}
-          {success && <div className="auth-success">{success}</div>}
+          {error && (
+            <div className="auth-error" role="alert" aria-live="polite">
+              {error}
+            </div>
+          )}
 
-          <form onSubmit={handleSubmit}>
+          {success && (
+            <div
+              className="auth-success"
+              role="status"
+              aria-live="polite"
+            >
+              {success}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} noValidate>
             <label htmlFor="name">Full name</label>
+
             <input
               id="name"
               type="text"
@@ -126,10 +218,14 @@ export default function RegisterPage() {
               placeholder="Enter your full name"
               value={form.name}
               onChange={handleChange}
+              autoComplete="name"
+              maxLength={80}
               required
+              disabled={loading}
             />
 
             <label htmlFor="email">Email address</label>
+
             <input
               id="email"
               type="email"
@@ -137,10 +233,15 @@ export default function RegisterPage() {
               placeholder="you@example.com"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
+              disabled={loading}
             />
 
-            <label htmlFor="photoURL">Profile photo URL (optional)</label>
+            <label htmlFor="photoURL">
+              Profile photo URL (optional)
+            </label>
+
             <input
               id="photoURL"
               type="url"
@@ -148,9 +249,11 @@ export default function RegisterPage() {
               placeholder="https://example.com/photo.jpg"
               value={form.photoURL}
               onChange={handleChange}
+              disabled={loading}
             />
 
             <label htmlFor="password">Password</label>
+
             <div className="password-wrapper">
               <input
                 id="password"
@@ -159,20 +262,27 @@ export default function RegisterPage() {
                 placeholder="Create a strong password"
                 value={form.password}
                 onChange={handleChange}
+                autoComplete="new-password"
+                minLength={6}
                 required
+                disabled={loading}
               />
 
               <button
                 type="button"
                 className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((previous) => !previous)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                disabled={loading}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
             </div>
 
             <p className="password-hint">
-              Minimum 6 characters, including uppercase and lowercase letters.
+              Minimum 6 characters, including uppercase and lowercase
+              letters.
             </p>
 
             <button

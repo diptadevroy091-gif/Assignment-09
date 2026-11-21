@@ -10,6 +10,16 @@ const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 ).replace(/\/+$/, "");
 
+async function readResponse(response) {
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Login failed. Please try again.");
+  }
+
+  return result;
+}
+
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,24 +33,49 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+
+    if (error) setError("");
   };
 
   const handleGoogleLogin = () => {
+    if (loading) return;
     window.location.href = `${API_URL}/api/auth/google`;
   };
 
   const handleGithubLogin = () => {
+    if (loading) return;
     window.location.href = `${API_URL}/api/auth/github`;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (loading) return;
+
     setError("");
+
+    const email = form.email.trim().toLowerCase();
+    const password = form.password;
+
+    if (!email || !password) {
+      setError("Please enter your email and password.");
+      return;
+    }
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -49,19 +84,22 @@ function LoginForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       });
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Login failed!");
-      }
+      const result = await readResponse(response);
 
       if (!result.token) {
         throw new Error(
-          "Login successful, but server did not return a token."
+          "Login successful, but the server did not return a token."
         );
+      }
+
+      if (!result.data || typeof result.data !== "object") {
+        throw new Error("Invalid user information received from server.");
       }
 
       localStorage.setItem("equipora-token", result.token);
@@ -77,7 +115,8 @@ function LoginForm() {
       if (
         returnTo &&
         returnTo.startsWith("/") &&
-        !returnTo.startsWith("//")
+        !returnTo.startsWith("//") &&
+        !returnTo.includes("\\")
       ) {
         router.replace(returnTo);
       } else if (result.data.role === "Admin") {
@@ -88,7 +127,9 @@ function LoginForm() {
         router.replace("/dashboard/customer");
       }
     } catch (err) {
-      setError(err.message || "Something went wrong!");
+      setError(
+        err.message || "Something went wrong. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -140,7 +181,15 @@ function LoginForm() {
             Enter your details to access your account.
           </p>
 
-          {error && <div className="auth-error">{error}</div>}
+          {error && (
+            <div
+              className="auth-error"
+              role="alert"
+              aria-live="polite"
+            >
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
             <label htmlFor="email">Email address</label>
@@ -152,7 +201,9 @@ function LoginForm() {
               placeholder="you@example.com"
               value={form.email}
               onChange={handleChange}
+              autoComplete="email"
               required
+              disabled={loading}
             />
 
             <label htmlFor="password">Password</label>
@@ -165,13 +216,17 @@ function LoginForm() {
                 placeholder="Enter your password"
                 value={form.password}
                 onChange={handleChange}
+                autoComplete="current-password"
                 required
+                disabled={loading}
               />
 
               <button
                 type="button"
                 className="password-toggle"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={() => setShowPassword((previous) => !previous)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
@@ -199,6 +254,7 @@ function LoginForm() {
               type="button"
               className="social-login-btn google-login-btn"
               onClick={handleGoogleLogin}
+              disabled={loading}
             >
               <svg
                 viewBox="0 0 48 48"
@@ -206,11 +262,24 @@ function LoginForm() {
                 height="21"
                 aria-hidden="true"
               >
-                <path fill="#4285F4" d="M43.6 24.5c0-1.5-.1-3-.4-4.4H24v8.3h11a9.4 9.4 0 0 1-4.1 6.2v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z" />
-                <path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.2c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.4A20 20 0 0 0 24 44Z" />
-                <path fill="#FBBC05" d="M12.8 27.7a12 12 0 0 1 0-7.4v-5.4H5.9a20 20 0 0 0 0 18.2l6.9-5.4Z" />
-                <path fill="#EA4335" d="M24 12.1c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 14.9l6.9 5.4c1.6-4.7 6-8.2 11.2-8.2Z" />
+                <path
+                  fill="#4285F4"
+                  d="M43.6 24.5c0-1.5-.1-3-.4-4.4H24v8.3h11a9.4 9.4 0 0 1-4.1 6.2v5.2h6.7c3.9-3.6 6-8.9 6-15.3Z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.7-5.2c-1.8 1.2-4 1.9-6.8 1.9-5.2 0-9.6-3.5-11.2-8.2H5.9v5.4A20 20 0 0 0 24 44Z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M12.8 27.7a12 12 0 0 1 0-7.4v-5.4H5.9a20 20 0 0 0 0 18.2l6.9-5.4Z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M24 12.1c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6.1 29.5 4 24 4A20 20 0 0 0 5.9 14.9l6.9 5.4c1.6-4.7 6-8.2 11.2-8.2Z"
+                />
               </svg>
+
               <span>Continue with Google</span>
             </button>
 
@@ -218,6 +287,7 @@ function LoginForm() {
               type="button"
               className="social-login-btn github-login-btn"
               onClick={handleGithubLogin}
+              disabled={loading}
             >
               <svg
                 viewBox="0 0 24 24"
@@ -228,6 +298,7 @@ function LoginForm() {
               >
                 <path d="M12 .9a11.1 11.1 0 0 0-3.5 21.6c.6.1.8-.3.8-.6v-2.1c-3.4.7-4.1-1.4-4.1-1.4-.5-1.3-1.2-1.7-1.2-1.7-1.1-.8.1-.8.1-.8 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6.1 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.2 1.2a11 11 0 0 1 5.8 0C17 3.3 18 3.6 18 3.6c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.8-2.9 5.8-5.6 6.1.4.4.8 1.1.8 2.2v3.8c0 .3.2.7.8.6A11.1 11.1 0 0 0 12 .9Z" />
               </svg>
+
               <span>Continue with GitHub</span>
             </button>
           </div>

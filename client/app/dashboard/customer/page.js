@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
@@ -11,11 +11,82 @@ const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
 ).replace(/\/+$/, "");
 
+async function readResponse(response) {
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Something went wrong.");
+  }
+
+  return result;
+}
+
+function formatDate(date) {
+  if (!date) return "N/A";
+
+  const parsed = new Date(date);
+
+  if (Number.isNaN(parsed.getTime())) return "N/A";
+
+  return parsed.toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatMoney(amount) {
+  return `৳${Number(amount || 0).toLocaleString("en-BD")}`;
+}
+
+function statusStyle(status) {
+  const value = String(status || "Pending").toLowerCase();
+
+  if (
+    ["paid", "confirmed", "completed", "approved"].includes(value)
+  ) {
+    return {
+      color: "#16a34a",
+      background: "rgba(22,163,74,0.12)",
+    };
+  }
+
+  if (["failed", "cancelled", "rejected"].includes(value)) {
+    return {
+      color: "#dc2626",
+      background: "rgba(220,38,38,0.12)",
+    };
+  }
+
+  return {
+    color: "#d97706",
+    background: "rgba(217,119,6,0.12)",
+  };
+}
+
+const cardStyle = {
+  background: "var(--surface-card)",
+  border: "1px solid var(--border)",
+  borderRadius: "18px",
+  padding: "24px",
+};
+
+const buttonStyle = {
+  border: "none",
+  borderRadius: "9px",
+  padding: "10px 16px",
+  background: "var(--accent)",
+  color: "var(--accent-text)",
+  fontWeight: "800",
+  cursor: "pointer",
+};
+
 export default function CustomerDashboard() {
   const router = useRouter();
   const { showToast } = useToast();
 
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState("");
   const [loading, setLoading] = useState(true);
 
   const [bookings, setBookings] = useState([]);
@@ -25,19 +96,81 @@ export default function CustomerDashboard() {
   const [favorites, setFavorites] = useState([]);
   const [favoritesLoading, setFavoritesLoading] = useState(true);
   const [favoritesError, setFavoritesError] = useState("");
-  const [removingId, setRemovingId] = useState("");
 
-  // Load bookings and favorites
+  const [removingId, setRemovingId] = useState("");
+  const [favoriteSearch, setFavoriteSearch] = useState("");
+  const [bookingFilter, setBookingFilter] = useState("All");
+
+  const loadBookings = useCallback(async (authToken) => {
+    setBookingsLoading(true);
+    setBookingError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/bookings/my-bookings`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const result = await readResponse(response);
+
+      const data = Array.isArray(result.data) ? result.data : [];
+
+      setBookings(
+        [...data].sort(
+          (a, b) =>
+            new Date(b.createdAt || b.startDate || 0).getTime() -
+            new Date(a.createdAt || a.startDate || 0).getTime()
+        )
+      );
+    } catch (error) {
+      console.error("Booking loading error:", error);
+      setBookingError(error.message || "Could not load your bookings.");
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, []);
+
+  const loadFavorites = useCallback(async (authToken) => {
+    setFavoritesLoading(true);
+    setFavoritesError("");
+
+    try {
+      const response = await fetch(
+        `${API_URL}/api/favorites/my-favorites`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+          cache: "no-store",
+        }
+      );
+
+      const result = await readResponse(response);
+
+      setFavorites(Array.isArray(result.data) ? result.data : []);
+    } catch (error) {
+      console.error("Favorites loading error:", error);
+      setFavoritesError(error.message || "Could not load favorites.");
+    } finally {
+      setFavoritesLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const loadDashboard = async () => {
+    const initializeDashboard = async () => {
       try {
-        const token =
+        const savedToken =
           localStorage.getItem("equipora-token") ||
           localStorage.getItem("token");
 
         const savedUser = localStorage.getItem("equipora-user");
 
-        if (!token || !savedUser) {
+        if (!savedToken || !savedUser) {
           router.replace("/login");
           return;
         }
@@ -52,88 +185,40 @@ export default function CustomerDashboard() {
           } else {
             router.replace("/");
           }
+
           return;
         }
 
+        setToken(savedToken);
         setUser(parsedUser);
 
-        // Load bookings
-        try {
-          const response = await fetch(
-            `${API_URL}/api/bookings/my-bookings`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              cache: "no-store",
-            }
-          );
-
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.message || "Could not load bookings.");
-          }
-
-          setBookings(Array.isArray(result.data) ? result.data : []);
-        } catch (error) {
-          console.error("Booking loading error:", error);
-          setBookingError(error.message || "Could not load your rentals.");
-        } finally {
-          setBookingsLoading(false);
-        }
-
-        // Load favorites
-        try {
-          const response = await fetch(
-            `${API_URL}/api/favorites/my-favorites`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-              cache: "no-store",
-            }
-          );
-
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.message || "Could not load favorites.");
-          }
-
-          setFavorites(Array.isArray(result.data) ? result.data : []);
-          setFavoritesError("");
-        } catch (error) {
-          console.error("Favorites loading error:", error);
-          setFavoritesError(error.message || "Could not load favorites.");
-        } finally {
-          setFavoritesLoading(false);
-        }
+        await Promise.all([
+          loadBookings(savedToken),
+          loadFavorites(savedToken),
+        ]);
       } catch (error) {
-        console.error("Dashboard loading error:", error);
+        console.error("Dashboard initialization error:", error);
+        showToast("Could not load your account. Please login again.", "error");
         router.replace("/login");
       } finally {
         setLoading(false);
       }
     };
 
-    loadDashboard();
-  }, [router]);
+    initializeDashboard();
+  }, [router, loadBookings, loadFavorites, showToast]);
 
-  // Remove favorite
   const handleRemoveFavorite = async (equipmentId) => {
+    if (!equipmentId || removingId) return;
+
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    setRemovingId(equipmentId);
+
     try {
-      const token =
-        localStorage.getItem("equipora-token") ||
-        localStorage.getItem("token");
-
-      if (!token) {
-        router.push("/login");
-        return;
-      }
-
-      setRemovingId(equipmentId);
-
       const response = await fetch(
         `${API_URL}/api/favorites/${equipmentId}`,
         {
@@ -144,11 +229,7 @@ export default function CustomerDashboard() {
         }
       );
 
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Could not remove favorite.");
-      }
+      await readResponse(response);
 
       setFavorites((previous) =>
         previous.filter(
@@ -165,42 +246,49 @@ export default function CustomerDashboard() {
     }
   };
 
-  const formatDate = (date) => {
-    if (!date) return "N/A";
+  const filteredFavorites = favorites.filter((favorite) => {
+    const equipment = favorite.equipmentId;
 
-    return new Date(date).toLocaleDateString("en-BD", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
+    if (!equipment) return false;
 
-  const statusStyle = (status) => {
-    const value = String(status || "Pending").toLowerCase();
+    const search = favoriteSearch.trim().toLowerCase();
 
-    if (
-      value === "paid" ||
-      value === "confirmed" ||
-      value === "completed"
-    ) {
-      return {
-        color: "#16a34a",
-        background: "rgba(22,163,74,0.12)",
-      };
+    if (!search) return true;
+
+    return (
+      equipment.equipmentName?.toLowerCase().includes(search) ||
+      equipment.category?.toLowerCase().includes(search) ||
+      equipment.location?.toLowerCase().includes(search)
+    );
+  });
+
+  const filteredBookings = bookings.filter((booking) => {
+    if (bookingFilter === "All") return true;
+
+    if (bookingFilter === "Paid") {
+      return String(booking.paymentStatus || "").toLowerCase() === "paid";
     }
 
-    if (value === "failed" || value === "cancelled") {
-      return {
-        color: "#dc2626",
-        background: "rgba(220,38,38,0.12)",
-      };
+    if (bookingFilter === "Pending") {
+      return String(booking.bookingStatus || "").toLowerCase() === "pending";
     }
 
-    return {
-      color: "#d97706",
-      background: "rgba(217,119,6,0.12)",
-    };
-  };
+    if (bookingFilter === "Completed") {
+      return String(booking.bookingStatus || "").toLowerCase() === "completed";
+    }
+
+    return true;
+  });
+
+  const paidBookings = bookings.filter(
+    (booking) =>
+      String(booking.paymentStatus || "").toLowerCase() === "paid"
+  );
+
+  const totalSpent = paidBookings.reduce(
+    (total, booking) => total + Number(booking.totalAmount || 0),
+    0
+  );
 
   if (loading || !user) {
     return (
@@ -211,6 +299,7 @@ export default function CustomerDashboard() {
           placeItems: "center",
           background: "var(--background)",
           color: "var(--foreground)",
+          fontWeight: "700",
         }}
       >
         Loading dashboard...
@@ -235,7 +324,7 @@ export default function CustomerDashboard() {
           padding: "55px 20px",
         }}
       >
-        {/* HEADER */}
+        {/* Dashboard Header */}
         <div style={{ marginBottom: "30px" }}>
           <span
             style={{
@@ -267,7 +356,66 @@ export default function CustomerDashboard() {
           </p>
         </div>
 
-        {/* QUICK LINKS */}
+        {/* Dashboard Statistics */}
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "15px",
+            marginBottom: "35px",
+          }}
+        >
+          {[
+            {
+              label: "Total Bookings",
+              value: bookings.length,
+              icon: "📦",
+            },
+            {
+              label: "Paid Bookings",
+              value: paidBookings.length,
+              icon: "✅",
+            },
+            {
+              label: "Saved Favorites",
+              value: favorites.length,
+              icon: "❤️",
+            },
+            {
+              label: "Total Spent",
+              value: formatMoney(totalSpent),
+              icon: "💳",
+            },
+          ].map((stat) => (
+            <div key={stat.label} style={cardStyle}>
+              <div style={{ fontSize: "25px", marginBottom: "12px" }}>
+                {stat.icon}
+              </div>
+
+              <p
+                style={{
+                  color: "var(--muted)",
+                  fontSize: "13px",
+                  marginBottom: "8px",
+                }}
+              >
+                {stat.label}
+              </p>
+
+              <h2
+                style={{
+                  fontSize: "clamp(20px, 3vw, 25px)",
+                  fontWeight: "800",
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {stat.value}
+              </h2>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Links */}
         <div
           style={{
             display: "grid",
@@ -300,12 +448,11 @@ export default function CustomerDashboard() {
               key={item.title}
               href={item.href}
               style={{
-                padding: "22px",
-                borderRadius: "16px",
-                background: "var(--surface-card)",
-                border: "1px solid var(--border)",
+                ...cardStyle,
                 color: "var(--foreground)",
                 textDecoration: "none",
+                display: "block",
+                transition: "border-color 0.2s ease",
               }}
             >
               <div style={{ fontSize: "27px", marginBottom: "12px" }}>
@@ -323,16 +470,8 @@ export default function CustomerDashboard() {
           ))}
         </div>
 
-        {/* MY FAVORITES */}
-        <div
-          style={{
-            background: "var(--surface-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "18px",
-            padding: "25px",
-            marginBottom: "30px",
-          }}
-        >
+        {/* Favorites Section */}
+        <div style={{ ...cardStyle, marginBottom: "30px" }}>
           <div
             style={{
               display: "flex",
@@ -373,19 +512,48 @@ export default function CustomerDashboard() {
             </span>
           </div>
 
+          {!favoritesLoading && favorites.length > 0 && (
+            <input
+              type="search"
+              value={favoriteSearch}
+              onChange={(event) => setFavoriteSearch(event.target.value)}
+              placeholder="Search your favorites..."
+              aria-label="Search favorites"
+              style={{
+                width: "100%",
+                maxWidth: "380px",
+                padding: "12px 15px",
+                borderRadius: "10px",
+                border: "1px solid var(--border)",
+                background: "var(--surface)",
+                color: "var(--foreground)",
+                outline: "none",
+                marginBottom: "20px",
+              }}
+            />
+          )}
+
           {favoritesLoading ? (
             <p style={{ color: "var(--muted)" }}>
               Loading your favorites...
             </p>
           ) : favoritesError ? (
-            <p style={{ color: "#dc2626" }}>
-              {favoritesError}
-            </p>
+            <div>
+              <p style={{ color: "#dc2626", marginBottom: "12px" }}>
+                {favoritesError}
+              </p>
+
+              <button
+                type="button"
+                style={buttonStyle}
+                onClick={() => loadFavorites(token)}
+              >
+                Try Again
+              </button>
+            </div>
           ) : favorites.length === 0 ? (
             <div style={{ textAlign: "center", padding: "35px 10px" }}>
-              <p style={{ fontSize: "38px", marginBottom: "12px" }}>
-                ♡
-              </p>
+              <p style={{ fontSize: "38px", marginBottom: "12px" }}>♡</p>
 
               <h3 style={{ fontWeight: "800", marginBottom: "8px" }}>
                 No favorites yet
@@ -398,18 +566,18 @@ export default function CustomerDashboard() {
               <Link
                 href="/equipment"
                 style={{
+                  ...buttonStyle,
                   display: "inline-block",
-                  padding: "12px 20px",
-                  borderRadius: "25px",
-                  background: "var(--accent)",
-                  color: "var(--accent-text)",
                   textDecoration: "none",
-                  fontWeight: "800",
                 }}
               >
                 Browse Equipment →
               </Link>
             </div>
+          ) : filteredFavorites.length === 0 ? (
+            <p style={{ color: "var(--muted)", padding: "20px 0" }}>
+              No favorites match your search.
+            </p>
           ) : (
             <div
               style={{
@@ -418,10 +586,8 @@ export default function CustomerDashboard() {
                 gap: "18px",
               }}
             >
-              {favorites.map((favorite) => {
+              {filteredFavorites.map((favorite) => {
                 const equipment = favorite.equipmentId;
-
-                if (!equipment) return null;
 
                 return (
                   <div
@@ -431,11 +597,16 @@ export default function CustomerDashboard() {
                       borderRadius: "15px",
                       overflow: "hidden",
                       background: "var(--surface)",
+                      minWidth: 0,
                     }}
                   >
                     <img
                       src={equipment.imageUrl || "/placeholder.png"}
                       alt={equipment.equipmentName || "Equipment"}
+                      loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.src = "/placeholder.png";
+                      }}
                       style={{
                         width: "100%",
                         height: "175px",
@@ -483,7 +654,7 @@ export default function CustomerDashboard() {
                           marginBottom: "16px",
                         }}
                       >
-                        ৳{Number(equipment.rentalPrice || 0).toLocaleString("en-BD")}
+                        {formatMoney(equipment.rentalPrice)}
                         <span
                           style={{
                             color: "var(--muted)",
@@ -506,15 +677,11 @@ export default function CustomerDashboard() {
                         <Link
                           href={`/equipment/${equipment._id}`}
                           style={{
+                            ...buttonStyle,
                             flex: "1",
                             textAlign: "center",
-                            padding: "10px",
-                            borderRadius: "9px",
-                            background: "var(--accent)",
-                            color: "var(--accent-text)",
                             textDecoration: "none",
                             fontSize: "12px",
-                            fontWeight: "800",
                           }}
                         >
                           View Details →
@@ -534,8 +701,7 @@ export default function CustomerDashboard() {
                             color: "#dc2626",
                             fontWeight: "700",
                             cursor: "pointer",
-                            opacity:
-                              removingId === equipment._id ? 0.6 : 1,
+                            opacity: removingId === equipment._id ? 0.6 : 1,
                           }}
                         >
                           {removingId === equipment._id
@@ -551,16 +717,8 @@ export default function CustomerDashboard() {
           )}
         </div>
 
-        {/* MY RENTALS */}
-        <div
-          style={{
-            background: "var(--surface-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "18px",
-            padding: "25px",
-            marginBottom: "30px",
-          }}
-        >
+        {/* Rentals Section */}
+        <div style={{ ...cardStyle, marginBottom: "30px" }}>
           <div
             style={{
               display: "flex",
@@ -601,17 +759,61 @@ export default function CustomerDashboard() {
             </span>
           </div>
 
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "8px",
+              marginBottom: "20px",
+            }}
+          >
+            {["All", "Paid", "Pending", "Completed"].map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                onClick={() => setBookingFilter(filter)}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: "20px",
+                  border: "1px solid var(--border)",
+                  background:
+                    bookingFilter === filter
+                      ? "var(--accent)"
+                      : "var(--surface)",
+                  color:
+                    bookingFilter === filter
+                      ? "var(--accent-text)"
+                      : "var(--foreground)",
+                  fontWeight: "700",
+                  cursor: "pointer",
+                }}
+              >
+                {filter}
+              </button>
+            ))}
+          </div>
+
           {bookingsLoading ? (
             <p style={{ color: "var(--muted)" }}>
               Loading your rentals...
             </p>
           ) : bookingError ? (
-            <p style={{ color: "#dc2626" }}>{bookingError}</p>
+            <div>
+              <p style={{ color: "#dc2626", marginBottom: "12px" }}>
+                {bookingError}
+              </p>
+
+              <button
+                type="button"
+                style={buttonStyle}
+                onClick={() => loadBookings(token)}
+              >
+                Try Again
+              </button>
+            </div>
           ) : bookings.length === 0 ? (
             <div style={{ textAlign: "center", padding: "35px 10px" }}>
-              <p style={{ fontSize: "35px", marginBottom: "12px" }}>
-                📦
-              </p>
+              <p style={{ fontSize: "35px", marginBottom: "12px" }}>📦</p>
 
               <h3 style={{ fontWeight: "800", marginBottom: "8px" }}>
                 No rentals yet
@@ -624,18 +826,18 @@ export default function CustomerDashboard() {
               <Link
                 href="/equipment"
                 style={{
+                  ...buttonStyle,
                   display: "inline-block",
-                  padding: "12px 20px",
-                  borderRadius: "25px",
-                  background: "var(--accent)",
-                  color: "var(--accent-text)",
                   textDecoration: "none",
-                  fontWeight: "800",
                 }}
               >
                 Browse Equipment →
               </Link>
             </div>
+          ) : filteredBookings.length === 0 ? (
+            <p style={{ color: "var(--muted)", padding: "20px 0" }}>
+              No bookings found for this filter.
+            </p>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table
@@ -662,6 +864,7 @@ export default function CustomerDashboard() {
                           padding: "14px 12px",
                           color: "var(--muted)",
                           fontSize: "12px",
+                          whiteSpace: "nowrap",
                         }}
                       >
                         {heading}
@@ -671,27 +874,47 @@ export default function CustomerDashboard() {
                 </thead>
 
                 <tbody>
-                  {bookings.map((booking) => (
+                  {filteredBookings.map((booking) => (
                     <tr
                       key={booking._id}
                       style={{ borderBottom: "1px solid var(--border)" }}
                     >
-                      <td style={{ padding: "16px 12px", fontWeight: "700" }}>
+                      <td
+                        style={{
+                          padding: "16px 12px",
+                          fontWeight: "700",
+                        }}
+                      >
                         {booking.equipmentId?.equipmentName || "Equipment"}
                       </td>
 
-                      <td style={{ padding: "16px 12px", fontSize: "13px" }}>
+                      <td
+                        style={{
+                          padding: "16px 12px",
+                          fontSize: "13px",
+                        }}
+                      >
                         {formatDate(booking.startDate)}
                         <br />
                         to {formatDate(booking.endDate)}
                       </td>
 
-                      <td style={{ padding: "16px 12px", fontSize: "13px" }}>
+                      <td
+                        style={{
+                          padding: "16px 12px",
+                          fontSize: "13px",
+                        }}
+                      >
                         {formatDate(booking.createdAt)}
                       </td>
 
-                      <td style={{ padding: "16px 12px", fontWeight: "800" }}>
-                        ৳{Number(booking.totalAmount || 0).toLocaleString("en-BD")}
+                      <td
+                        style={{
+                          padding: "16px 12px",
+                          fontWeight: "800",
+                        }}
+                      >
+                        {formatMoney(booking.totalAmount)}
                       </td>
 
                       <td style={{ padding: "16px 12px" }}>
@@ -702,6 +925,7 @@ export default function CustomerDashboard() {
                             borderRadius: "20px",
                             fontSize: "12px",
                             fontWeight: "800",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {booking.paymentStatus || "Pending"}
@@ -716,6 +940,7 @@ export default function CustomerDashboard() {
                             borderRadius: "20px",
                             fontSize: "12px",
                             fontWeight: "800",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           {booking.bookingStatus || "Pending"}
@@ -729,15 +954,8 @@ export default function CustomerDashboard() {
           )}
         </div>
 
-        {/* ACCOUNT INFORMATION */}
-        <div
-          style={{
-            background: "var(--surface-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "18px",
-            padding: "28px",
-          }}
-        >
+        {/* Account Information */}
+        <div style={cardStyle}>
           <h2
             style={{
               fontSize: "22px",
@@ -778,19 +996,19 @@ export default function CustomerDashboard() {
               <strong>{user.role}</strong>
             </div>
           </div>
-        </div>
 
-        <div style={{ marginTop: "25px" }}>
-          <Link
-            href="/"
-            style={{
-              color: "var(--muted)",
-              textDecoration: "none",
-              fontWeight: "700",
-            }}
-          >
-            ← Back to Home
-          </Link>
+          <div style={{ marginTop: "25px" }}>
+            <Link
+              href="/"
+              style={{
+                color: "var(--muted)",
+                textDecoration: "none",
+                fontWeight: "700",
+              }}
+            >
+              ← Back to Home
+            </Link>
+          </div>
         </div>
       </section>
     </main>

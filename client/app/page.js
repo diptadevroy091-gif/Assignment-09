@@ -10,7 +10,7 @@ import "./page.css";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+).replace(/\/+$/, "");
 
 const categories = [
   ["🏗️", "Construction", "Heavy machinery and tools"],
@@ -21,7 +21,6 @@ const categories = [
   ["🎪", "Events", "Event and party equipment"],
 ];
 
-// SAMPLE CUSTOMER REVIEWS
 const reviews = [
   {
     id: 1,
@@ -62,6 +61,7 @@ export default function Home() {
   const { showToast } = useToast();
 
   const [equipment, setEquipment] = useState([]);
+  const [totalEquipment, setTotalEquipment] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
@@ -97,10 +97,19 @@ export default function Home() {
         }
 
         if (active) {
-          setEquipment(
-            Array.isArray(equipmentResult.data)
-              ? equipmentResult.data.slice(0, 6)
-              : []
+          const equipmentData = Array.isArray(equipmentResult.data)
+            ? equipmentResult.data
+            : [];
+
+          setEquipment(equipmentData.slice(0, 6));
+
+          // Use the actual total returned by the API.
+          const actualTotal = Number(equipmentResult.total);
+
+          setTotalEquipment(
+            Number.isFinite(actualTotal) && actualTotal >= 0
+              ? actualTotal
+              : equipmentData.length
           );
         }
 
@@ -177,6 +186,7 @@ export default function Home() {
 
     return () => {
       active = false;
+
       window.removeEventListener("storage", handleAuthChange);
       window.removeEventListener(
         "equipora-auth-changed",
@@ -385,20 +395,27 @@ export default function Home() {
             </button>
           </div>
 
+          {/* REAL PLATFORM INFORMATION */}
           <div className="hero-stats">
             <div>
-              <strong>500+</strong>
-              <span>Equipment items</span>
+              <strong>
+                {equipmentLoading
+                  ? "—"
+                  : totalEquipment === null
+                    ? "0"
+                    : totalEquipment.toLocaleString("en-BD")}
+              </strong>
+              <span>Equipment listings</span>
             </div>
 
             <div>
-              <strong>1,200+</strong>
-              <span>Happy customers</span>
+              <strong>3</strong>
+              <span>Platform user roles</span>
             </div>
 
             <div>
-              <strong>50+</strong>
-              <span>Locations</span>
+              <strong>Online</strong>
+              <span>Payment support</span>
             </div>
           </div>
         </div>
@@ -555,8 +572,12 @@ export default function Home() {
                     <div className="equipment-bottom">
                       <div>
                         <strong>
-                          ৳{Number(item.rentalPrice || 0).toLocaleString("en-BD")}
+                          ৳
+                          {Number(item.rentalPrice || 0).toLocaleString(
+                            "en-BD"
+                          )}
                         </strong>
+
                         <span>
                           / {item.rentalType || "day"}
                         </span>
@@ -691,6 +712,7 @@ export default function Home() {
                 aria-label={`${review.rating} out of 5 stars`}
               >
                 {"★".repeat(review.rating)}
+
                 <span style={{ color: "#777" }}>
                   {"☆".repeat(5 - review.rating)}
                 </span>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
@@ -35,6 +35,66 @@ const initialForm = {
   rentalTerms: "",
 };
 
+const cardStyle = {
+  background: "var(--surface-card, #151515)",
+  border: "1px solid var(--border, #292929)",
+  borderRadius: "14px",
+  padding: "24px",
+};
+
+const inputStyle = {
+  width: "100%",
+  padding: "13px 14px",
+  background: "var(--background, #080808)",
+  color: "var(--foreground, #fff)",
+  border: "1px solid var(--border, #333)",
+  borderRadius: "8px",
+  outline: "none",
+  fontSize: "14px",
+  boxSizing: "border-box",
+};
+
+const labelStyle = {
+  display: "block",
+  marginBottom: "9px",
+  color: "var(--foreground, #ccc)",
+  fontSize: "14px",
+  fontWeight: "600",
+};
+
+const buttonStyle = {
+  background: "var(--accent, #c9f269)",
+  color: "var(--accent-text, #080808)",
+  border: "none",
+  padding: "13px 22px",
+  borderRadius: "8px",
+  fontWeight: "bold",
+  cursor: "pointer",
+  display: "inline-block",
+  textAlign: "center",
+  textDecoration: "none",
+};
+
+const secondaryButtonStyle = {
+  background: "var(--surface, #252525)",
+  color: "var(--foreground, #fff)",
+  border: "1px solid var(--border, #444)",
+  padding: "11px 18px",
+  borderRadius: "8px",
+  fontWeight: "bold",
+  cursor: "pointer",
+};
+
+async function readResponse(response) {
+  const result = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(result.message || "Something went wrong.");
+  }
+
+  return result;
+}
+
 export default function OwnerDashboard() {
   const router = useRouter();
   const { showToast } = useToast();
@@ -42,66 +102,34 @@ export default function OwnerDashboard() {
   const [user, setUser] = useState(null);
   const [equipment, setEquipment] = useState([]);
   const [form, setForm] = useState(initialForm);
+
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
+
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [itemToDelete, setItemToDelete] = useState(null);
 
-  const cardStyle = {
-    background: "var(--surface-card, #151515)",
-    border: "1px solid var(--border, #292929)",
-    borderRadius: "14px",
-    padding: "24px",
-  };
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-  const inputStyle = {
-    width: "100%",
-    padding: "13px 14px",
-    background: "var(--background, #080808)",
-    color: "var(--foreground, #fff)",
-    border: "1px solid var(--border, #333)",
-    borderRadius: "8px",
-    outline: "none",
-    fontSize: "14px",
-    boxSizing: "border-box",
-  };
+  const getToken = () =>
+    typeof window !== "undefined"
+      ? localStorage.getItem("equipora-token") ||
+        localStorage.getItem("token")
+      : null;
 
-  const labelStyle = {
-    display: "block",
-    marginBottom: "9px",
-    color: "var(--foreground, #ccc)",
-    fontSize: "14px",
-    fontWeight: "600",
-  };
+  const fetchMyEquipment = async (token = getToken(), showErrorToast = true) => {
+    if (!token) {
+      setLoading(false);
+      return;
+    }
 
-  const buttonStyle = {
-    background: "var(--accent, #c9f269)",
-    color: "var(--accent-text, #080808)",
-    border: "none",
-    padding: "13px 22px",
-    borderRadius: "8px",
-    fontWeight: "bold",
-    cursor: "pointer",
-    display: "inline-block",
-    textAlign: "center",
-    textDecoration: "none",
-  };
-
-  const secondaryButtonStyle = {
-    background: "var(--surface, #252525)",
-    color: "var(--foreground, #fff)",
-    border: "1px solid var(--border, #444)",
-    padding: "11px 18px",
-    borderRadius: "8px",
-    fontWeight: "bold",
-    cursor: "pointer",
-  };
-
-  const fetchMyEquipment = async (token, showErrorToast = true) => {
     try {
       setLoading(true);
+      setLoadError("");
 
       const response = await fetch(
         `${API_BASE}/api/equipment/my-equipment`,
@@ -111,16 +139,21 @@ export default function OwnerDashboard() {
         }
       );
 
-      const result = await response.json();
+      const result = await readResponse(response);
 
-      if (!response.ok) {
-        throw new Error(result.message || "Failed to load equipment.");
+      if (!Array.isArray(result.data)) {
+        throw new Error("Invalid equipment data received from server.");
       }
 
-      setEquipment(result.data || []);
-    } catch (err) {
+      setEquipment(result.data);
+    } catch (error) {
+      setLoadError(error.message || "Could not load your equipment.");
+
       if (showErrorToast) {
-        showToast(err.message || "Could not load your equipment.", "error");
+        showToast(
+          error.message || "Could not load your equipment.",
+          "error"
+        );
       }
     } finally {
       setLoading(false);
@@ -128,10 +161,7 @@ export default function OwnerDashboard() {
   };
 
   useEffect(() => {
-    const token =
-      localStorage.getItem("equipora-token") ||
-      localStorage.getItem("token");
-
+    const token = getToken();
     const savedUser = localStorage.getItem("equipora-user");
 
     if (!token || !savedUser) {
@@ -159,11 +189,58 @@ export default function OwnerDashboard() {
       localStorage.removeItem("equipora-user");
       router.replace("/login");
     }
+    // Authentication is checked once when the dashboard mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((previous) => ({ ...previous, [name]: value }));
+  const statistics = useMemo(() => {
+    const total = equipment.length;
+
+    const approved = equipment.filter(
+      (item) => item.status === "Approved"
+    ).length;
+
+    const pending = equipment.filter(
+      (item) => item.status === "Pending"
+    ).length;
+
+    const rejected = equipment.filter(
+      (item) => item.status === "Rejected"
+    ).length;
+
+    return { total, approved, pending, rejected };
+  }, [equipment]);
+
+  const filteredEquipment = useMemo(() => {
+    const search = searchTerm.trim().toLowerCase();
+
+    return equipment.filter((item) => {
+      const matchesSearch =
+        !search ||
+        [
+          item.equipmentName,
+          item.category,
+          item.location,
+          item.brand,
+          item.model,
+        ]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(search));
+
+      const matchesStatus =
+        statusFilter === "All" || item.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [equipment, searchTerm, statusFilter]);
+
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
   };
 
   const openAddForm = () => {
@@ -196,26 +273,50 @@ export default function OwnerDashboard() {
   };
 
   const closeForm = () => {
+    if (submitting) return;
+
     setShowForm(false);
     setEditingId(null);
     setForm(initialForm);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+
+    if (submitting) return;
+
+    const price = Number(form.rentalPrice);
+    const quantity = Number(form.availableQuantity);
+
+    if (!Number.isFinite(price) || price <= 0) {
+      showToast("Please enter a valid rental price.", "error");
+      return;
+    }
+
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      showToast("Available quantity must be at least 1.", "error");
+      return;
+    }
+
+    const token = getToken();
+
+    if (!token) {
+      showToast("Please login again.", "error");
+      router.replace("/login");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const token =
-        localStorage.getItem("equipora-token") ||
-        localStorage.getItem("token");
-
-      if (!token) throw new Error("Please login again.");
-
       const equipmentData = {
         ...form,
-        rentalPrice: Number(form.rentalPrice),
-        availableQuantity: Number(form.availableQuantity),
+        equipmentName: form.equipmentName.trim(),
+        description: form.description.trim(),
+        location: form.location.trim(),
+        rentalTerms: form.rentalTerms.trim(),
+        rentalPrice: price,
+        availableQuantity: quantity,
       };
 
       const isEditing = Boolean(editingId);
@@ -233,11 +334,7 @@ export default function OwnerDashboard() {
         body: JSON.stringify(equipmentData),
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Equipment could not be saved.");
-      }
+      const result = await readResponse(response);
 
       showToast(
         result.message ||
@@ -247,30 +344,41 @@ export default function OwnerDashboard() {
         "success"
       );
 
-      closeForm();
+      setShowForm(false);
+      setEditingId(null);
+      setForm(initialForm);
+
       await fetchMyEquipment(token, false);
-    } catch (err) {
-      showToast(err.message || "Something went wrong.", "error");
+    } catch (error) {
+      showToast(
+        error.message || "Equipment could not be saved.",
+        "error"
+      );
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = (item) => setItemToDelete(item);
+  const handleDelete = (item) => {
+    if (deletingId) return;
+    setItemToDelete(item);
+  };
 
   const confirmDelete = async () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete || deletingId) return;
 
     const item = itemToDelete;
+    const token = getToken();
+
+    if (!token) {
+      showToast("Please login again.", "error");
+      router.replace("/login");
+      return;
+    }
+
     setDeletingId(item._id);
 
     try {
-      const token =
-        localStorage.getItem("equipora-token") ||
-        localStorage.getItem("token");
-
-      if (!token) throw new Error("Please login again.");
-
       const response = await fetch(
         `${API_BASE}/api/equipment/my-equipment/${item._id}`,
         {
@@ -279,20 +387,27 @@ export default function OwnerDashboard() {
         }
       );
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "Equipment could not be deleted.");
-      }
+      const result = await readResponse(response);
 
       setItemToDelete(null);
 
-      if (editingId === item._id) closeForm();
+      if (editingId === item._id) {
+        setShowForm(false);
+        setEditingId(null);
+        setForm(initialForm);
+      }
 
-      showToast(result.message || "Equipment deleted successfully!", "success");
+      showToast(
+        result.message || "Equipment deleted successfully!",
+        "success"
+      );
+
       await fetchMyEquipment(token, false);
-    } catch (err) {
-      showToast(err.message || "Something went wrong.", "error");
+    } catch (error) {
+      showToast(
+        error.message || "Equipment could not be deleted.",
+        "error"
+      );
     } finally {
       setDeletingId(null);
     }
@@ -334,7 +449,13 @@ export default function OwnerDashboard() {
     >
       <Navbar />
 
-      <div style={{ padding: "35px 6%", maxWidth: "1600px", margin: "0 auto" }}>
+      <div
+        style={{
+          padding: "35px 6%",
+          maxWidth: "1600px",
+          margin: "0 auto",
+        }}
+      >
         <section style={{ marginTop: "20px" }}>
           <p
             style={{
@@ -346,7 +467,12 @@ export default function OwnerDashboard() {
             EQUIPMENT OWNER PANEL
           </p>
 
-          <h1 style={{ fontSize: "clamp(30px, 5vw, 46px)", marginBottom: "12px" }}>
+          <h1
+            style={{
+              fontSize: "clamp(30px, 5vw, 46px)",
+              marginBottom: "12px",
+            }}
+          >
             Welcome, {user.name || "Owner"}!
           </h1>
 
@@ -354,7 +480,6 @@ export default function OwnerDashboard() {
             Manage your equipment rental business from your dashboard.
           </p>
 
-          {/* Dashboard Navigation */}
           <div
             style={{
               display: "flex",
@@ -409,6 +534,55 @@ export default function OwnerDashboard() {
           </div>
         </section>
 
+        {/* Equipment Statistics */}
+        <section
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: "16px",
+            marginTop: "35px",
+          }}
+        >
+          {[
+            {
+              label: "Total Equipment",
+              value: statistics.total,
+              color: "var(--accent, #c9f269)",
+            },
+            {
+              label: "Approved",
+              value: statistics.approved,
+              color: "#9be7a5",
+            },
+            {
+              label: "Pending",
+              value: statistics.pending,
+              color: "#ffd479",
+            },
+            {
+              label: "Rejected",
+              value: statistics.rejected,
+              color: "#ff8585",
+            },
+          ].map((stat) => (
+            <div key={stat.label} style={cardStyle}>
+              <p style={{ color: "var(--muted, #999)", marginTop: 0 }}>
+                {stat.label}
+              </p>
+              <h2
+                style={{
+                  color: stat.color,
+                  fontSize: "32px",
+                  marginBottom: 0,
+                }}
+              >
+                {stat.value}
+              </h2>
+            </div>
+          ))}
+        </section>
+
+        {/* Equipment Management */}
         <section style={{ marginTop: "45px" }}>
           <div
             style={{
@@ -429,26 +603,68 @@ export default function OwnerDashboard() {
               </p>
             </div>
 
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "10px",
+                flexWrap: "wrap",
+              }}
+            >
               <button
-                onClick={() =>
-                  fetchMyEquipment(
-                    localStorage.getItem("equipora-token") ||
-                    localStorage.getItem("token")
-                  )
-                }
+                onClick={() => fetchMyEquipment()}
                 style={secondaryButtonStyle}
                 disabled={loading}
               >
                 {loading ? "Refreshing..." : "Refresh List"}
               </button>
 
-              <button onClick={showForm ? closeForm : openAddForm} style={buttonStyle}>
+              <button
+                onClick={showForm ? closeForm : openAddForm}
+                style={buttonStyle}
+                disabled={submitting}
+              >
                 {showForm ? "Close Form" : "+ Add Equipment"}
               </button>
             </div>
           </div>
 
+          {/* Search and Filter */}
+          <div
+            style={{
+              ...cardStyle,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: "15px",
+              marginBottom: "22px",
+            }}
+          >
+            <div>
+              <label style={labelStyle}>Search Equipment</label>
+              <input
+                style={inputStyle}
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search name, category, brand..."
+              />
+            </div>
+
+            <div>
+              <label style={labelStyle}>Filter by Status</label>
+              <select
+                style={inputStyle}
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+              >
+                <option value="All">All Status</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Pending</option>
+                <option value="Rejected">Rejected</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Add / Edit Form */}
           {showForm && (
             <div style={{ ...cardStyle, marginBottom: "30px" }}>
               <h2 style={{ marginTop: 0, marginBottom: "25px" }}>
@@ -490,6 +706,7 @@ export default function OwnerDashboard() {
                         onChange={handleChange}
                         placeholder={placeholder}
                         min={type === "number" ? "0" : undefined}
+                        step={name === "rentalPrice" ? "0.01" : undefined}
                         required
                       />
                     </div>
@@ -532,7 +749,11 @@ export default function OwnerDashboard() {
                 <div style={{ marginTop: "20px" }}>
                   <label style={labelStyle}>Description *</label>
                   <textarea
-                    style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }}
+                    style={{
+                      ...inputStyle,
+                      minHeight: "100px",
+                      resize: "vertical",
+                    }}
                     name="description"
                     value={form.description}
                     onChange={handleChange}
@@ -544,7 +765,11 @@ export default function OwnerDashboard() {
                 <div style={{ marginTop: "20px" }}>
                   <label style={labelStyle}>Rental Terms *</label>
                   <textarea
-                    style={{ ...inputStyle, minHeight: "100px", resize: "vertical" }}
+                    style={{
+                      ...inputStyle,
+                      minHeight: "100px",
+                      resize: "vertical",
+                    }}
                     name="rentalTerms"
                     value={form.rentalTerms}
                     onChange={handleChange}
@@ -553,8 +778,22 @@ export default function OwnerDashboard() {
                   />
                 </div>
 
-                <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", marginTop: "22px" }}>
-                  <button type="submit" disabled={submitting} style={{ ...buttonStyle, opacity: submitting ? 0.6 : 1 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "12px",
+                    flexWrap: "wrap",
+                    marginTop: "22px",
+                  }}
+                >
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    style={{
+                      ...buttonStyle,
+                      opacity: submitting ? 0.6 : 1,
+                    }}
+                  >
                     {submitting
                       ? "Saving..."
                       : editingId
@@ -562,7 +801,12 @@ export default function OwnerDashboard() {
                         : "Submit Equipment"}
                   </button>
 
-                  <button type="button" onClick={closeForm} disabled={submitting} style={secondaryButtonStyle}>
+                  <button
+                    type="button"
+                    onClick={closeForm}
+                    disabled={submitting}
+                    style={secondaryButtonStyle}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -570,37 +814,95 @@ export default function OwnerDashboard() {
             </div>
           )}
 
+          {/* Loading / Error / Empty States */}
           {loading ? (
             <div style={cardStyle}>
               <p style={{ color: "var(--accent, #c9f269)" }}>
                 Loading your equipment...
               </p>
             </div>
-          ) : equipment.length === 0 ? (
-            <div style={{ ...cardStyle, textAlign: "center", padding: "45px 20px" }}>
-              <h3>No Equipment Found</h3>
-              <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
-                You have not added any equipment yet. Click the Add Equipment
-                button to submit your first item.
-              </p>
+          ) : loadError ? (
+            <div style={{ ...cardStyle, textAlign: "center" }}>
+              <h3>Could Not Load Equipment</h3>
+              <p style={{ color: "var(--muted, #999)" }}>{loadError}</p>
+              <button
+                onClick={() => fetchMyEquipment()}
+                style={buttonStyle}
+              >
+                Try Again
+              </button>
             </div>
-          ) : (
+          ) : filteredEquipment.length === 0 ? (
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                gap: "22px",
+                ...cardStyle,
+                textAlign: "center",
+                padding: "45px 20px",
               }}
             >
-              {equipment.map((item) => (
-                <article
-                  key={item._id}
-                  style={{ ...cardStyle, padding: 0, overflow: "hidden" }}
+              <h3>
+                {equipment.length === 0
+                  ? "No Equipment Found"
+                  : "No Matching Equipment"}
+              </h3>
+
+              <p style={{ color: "var(--muted, #999)", lineHeight: 1.7 }}>
+                {equipment.length === 0
+                  ? "You have not added any equipment yet. Click the Add Equipment button to submit your first item."
+                  : "Try another search term or change the status filter."}
+              </p>
+
+              {equipment.length === 0 ? (
+                <button onClick={openAddForm} style={buttonStyle}>
+                  + Add Your First Equipment
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setSearchTerm("");
+                    setStatusFilter("All");
+                  }}
+                  style={secondaryButtonStyle}
                 >
-                  {item.imageUrl && (
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <p
+                style={{
+                  color: "var(--muted, #999)",
+                  marginBottom: "18px",
+                }}
+              >
+                Showing {filteredEquipment.length} of {equipment.length} equipment
+              </p>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+                  gap: "22px",
+                }}
+              >
+                {filteredEquipment.map((item) => (
+                  <article
+                    key={item._id}
+                    style={{
+                      ...cardStyle,
+                      padding: 0,
+                      overflow: "hidden",
+                    }}
+                  >
                     <img
-                      src={item.imageUrl}
-                      alt={item.equipmentName}
+                      src={item.imageUrl || "/placeholder.png"}
+                      alt={item.equipmentName || "Equipment"}
+                      loading="lazy"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = "/placeholder.png";
+                      }}
                       style={{
                         width: "100%",
                         height: "190px",
@@ -608,96 +910,157 @@ export default function OwnerDashboard() {
                         background: "#222",
                       }}
                     />
-                  )}
 
-                  <div style={{ padding: "20px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: "10px",
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <span style={{ fontSize: "11px", color: "var(--accent, #c9f269)", letterSpacing: "1px" }}>
-                        {item.category}
-                      </span>
-
-                      <span
+                    <div style={{ padding: "20px" }}>
+                      <div
                         style={{
-                          color: getStatusColor(item.status),
-                          background: "#252525",
-                          padding: "6px 10px",
-                          borderRadius: "20px",
-                          fontSize: "11px",
-                          fontWeight: "bold",
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          gap: "10px",
+                          flexWrap: "wrap",
                         }}
                       >
-                        {item.status || "Pending"}
-                      </span>
-                    </div>
+                        <span
+                          style={{
+                            fontSize: "11px",
+                            color: "var(--accent, #c9f269)",
+                            letterSpacing: "1px",
+                          }}
+                        >
+                          {item.category}
+                        </span>
 
-                    <h3 style={{ fontSize: "21px", marginBottom: "8px" }}>
-                      {item.equipmentName}
-                    </h3>
+                        <span
+                          style={{
+                            color: getStatusColor(item.status),
+                            background: "#252525",
+                            padding: "6px 10px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          {item.status || "Pending"}
+                        </span>
+                      </div>
 
-                    <p style={{ color: "var(--muted, #999)", fontSize: "13px", lineHeight: 1.6 }}>
-                      {item.description}
-                    </p>
-
-                    <div style={{ borderTop: "1px solid var(--border, #333)", marginTop: "16px", paddingTop: "15px" }}>
-                      <p style={{ margin: "7px 0" }}>
-                        <strong style={{ color: "var(--accent, #c9f269)" }}>
-                          ৳{item.rentalPrice}
-                        </strong>{" "}
-                        / {item.rentalType}
-                      </p>
-                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
-                        Location: {item.location}
-                      </p>
-                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
-                        Quantity: {item.availableQuantity}
-                      </p>
-                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
-                        Brand: {item.brand} {item.model}
-                      </p>
-                      <p style={{ margin: "7px 0", color: "var(--muted, #999)" }}>
-                        Condition: {item.condition}
-                      </p>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-                      <button onClick={() => handleEdit(item)} style={{ ...buttonStyle, flex: 1, padding: "11px" }}>
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(item)}
-                        disabled={deletingId === item._id}
+                      <h3
                         style={{
-                          flex: 1,
-                          background: "#381919",
-                          color: "#ff9999",
-                          border: "1px solid #713333",
-                          padding: "11px",
-                          borderRadius: "8px",
-                          fontWeight: "bold",
-                          cursor: "pointer",
-                          opacity: deletingId === item._id ? 0.6 : 1,
+                          fontSize: "21px",
+                          marginBottom: "8px",
                         }}
                       >
-                        {deletingId === item._id ? "Deleting..." : "Delete"}
-                      </button>
+                        {item.equipmentName}
+                      </h3>
+
+                      <p
+                        style={{
+                          color: "var(--muted, #999)",
+                          fontSize: "13px",
+                          lineHeight: 1.6,
+                        }}
+                      >
+                        {item.description}
+                      </p>
+
+                      <div
+                        style={{
+                          borderTop: "1px solid var(--border, #333)",
+                          marginTop: "16px",
+                          paddingTop: "15px",
+                        }}
+                      >
+                        <p style={{ margin: "7px 0" }}>
+                          <strong style={{ color: "var(--accent, #c9f269)" }}>
+                            ৳{item.rentalPrice}
+                          </strong>{" "}
+                          / {item.rentalType}
+                        </p>
+
+                        <p
+                          style={{
+                            margin: "7px 0",
+                            color: "var(--muted, #999)",
+                          }}
+                        >
+                          Location: {item.location}
+                        </p>
+
+                        <p
+                          style={{
+                            margin: "7px 0",
+                            color: "var(--muted, #999)",
+                          }}
+                        >
+                          Quantity: {item.availableQuantity}
+                        </p>
+
+                        <p
+                          style={{
+                            margin: "7px 0",
+                            color: "var(--muted, #999)",
+                          }}
+                        >
+                          Brand: {item.brand || "N/A"} {item.model || ""}
+                        </p>
+
+                        <p
+                          style={{
+                            margin: "7px 0",
+                            color: "var(--muted, #999)",
+                          }}
+                        >
+                          Condition: {item.condition || "N/A"}
+                        </p>
+                      </div>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          marginTop: "20px",
+                        }}
+                      >
+                        <button
+                          onClick={() => handleEdit(item)}
+                          style={{
+                            ...buttonStyle,
+                            flex: 1,
+                            padding: "11px",
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDelete(item)}
+                          disabled={Boolean(deletingId)}
+                          style={{
+                            flex: 1,
+                            background: "#381919",
+                            color: "#ff9999",
+                            border: "1px solid #713333",
+                            padding: "11px",
+                            borderRadius: "8px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            opacity: deletingId ? 0.6 : 1,
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))}
-            </div>
+                  </article>
+                ))}
+              </div>
+            </>
           )}
         </section>
       </div>
 
+      {/* Delete Confirmation Modal */}
       {itemToDelete && (
         <div
           onClick={() => {
@@ -715,7 +1078,7 @@ export default function OwnerDashboard() {
           }}
         >
           <div
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
             style={{
               width: "100%",
               maxWidth: "420px",
@@ -756,7 +1119,13 @@ export default function OwnerDashboard() {
               ? This action cannot be undone.
             </p>
 
-            <div style={{ display: "flex", gap: "12px", marginTop: "25px" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                marginTop: "25px",
+              }}
+            >
               <button
                 type="button"
                 disabled={Boolean(deletingId)}

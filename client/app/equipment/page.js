@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Navbar from "../components/Navbar";
@@ -21,7 +21,7 @@ const categories = [
   "Event Equipment",
 ];
 
-export default function EquipmentPage() {
+function EquipmentPageContent() {
   const searchParams = useSearchParams();
 
   const [equipment, setEquipment] = useState([]);
@@ -42,10 +42,7 @@ export default function EquipmentPage() {
   useEffect(() => {
     const selectedCategory = searchParams.get("category");
 
-    if (
-      selectedCategory &&
-      categories.includes(selectedCategory)
-    ) {
+    if (selectedCategory && categories.includes(selectedCategory)) {
       setCategory(selectedCategory);
     }
   }, [searchParams]);
@@ -58,7 +55,6 @@ export default function EquipmentPage() {
       setLoading(true);
       setError("");
 
-      // Validate price filters.
       const minimum = minPrice === "" ? null : Number(minPrice);
       const maximum = maxPrice === "" ? null : Number(maxPrice);
 
@@ -166,8 +162,6 @@ export default function EquipmentPage() {
 
     return () => {
       clearTimeout(timer);
-
-      // Invalidate any older pending request.
       requestIdRef.current += 1;
     };
   }, [fetchEquipment]);
@@ -184,7 +178,7 @@ export default function EquipmentPage() {
     setError("");
   };
 
-  // Count currently active filters.
+  // Count active filters.
   const activeFilterCount = [
     search.trim() !== "",
     category !== "All",
@@ -412,7 +406,9 @@ export default function EquipmentPage() {
 
                   <h3>{item.equipmentName}</h3>
 
-                  <p>{item.location || "Location not specified"}</p>
+                  <p>
+                    {item.location || "Location not specified"}
+                  </p>
 
                   <p>
                     Available Quantity:{" "}
@@ -442,5 +438,23 @@ export default function EquipmentPage() {
         </div>
       </section>
     </main>
+  );
+}
+
+// Suspense boundary for useSearchParams().
+export default function EquipmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="equipment-page">
+          <Navbar />
+          <div className="equipment-message" role="status">
+            Loading equipment...
+          </div>
+        </main>
+      }
+    >
+      <EquipmentPageContent />
+    </Suspense>
   );
 }

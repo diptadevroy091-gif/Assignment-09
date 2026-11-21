@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Navbar from "../../components/Navbar";
@@ -9,10 +9,38 @@ import { useToast } from "../../components/ToastProvider";
 
 const API_URL = (
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+).replace(/\/+$/, "");
+
+const getToday = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const getToken = () => {
+  if (typeof window === "undefined") return null;
+
+  return (
+    localStorage.getItem("equipora-token") ||
+    localStorage.getItem("token")
+  );
+};
+
+const readResponse = async (response) => {
+  try {
+    return await response.json();
+  } catch {
+    throw new Error("Invalid response received from server.");
+  }
+};
 
 export default function EquipmentDetailsPage() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+
   const router = useRouter();
   const { showToast } = useToast();
 
@@ -32,46 +60,66 @@ export default function EquipmentDetailsPage() {
     notes: "",
   });
 
-  const getToken = () =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("equipora-token") ||
-        localStorage.getItem("token")
-      : null;
-
-  // Fetch equipment details
+  // Fetch equipment details.
   useEffect(() => {
     if (!id) return;
 
+    const controller = new AbortController();
+
     const fetchEquipment = async () => {
+      setLoading(true);
+      setError("");
+
       try {
         const response = await fetch(
           `${API_URL}/api/equipment/${id}`,
-          { cache: "no-store" }
+          {
+            cache: "no-store",
+            signal: controller.signal,
+          }
         );
 
-        const result = await response.json();
+        const result = await readResponse(response);
 
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || "Equipment not found!");
+        if (!response.ok || !result.success || !result.data) {
+          throw new Error(
+            result.message || "Equipment not found."
+          );
         }
 
         setEquipment(result.data);
       } catch (err) {
-        setError(err.message);
+        if (err.name === "AbortError") return;
+
+        console.error("Equipment details error:", err);
+
+        setError(
+          err.message || "Unable to load equipment details."
+        );
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     fetchEquipment();
+
+    return () => controller.abort();
   }, [id]);
 
-  // Check whether this equipment is already in favorites
+  // Check whether the equipment is already in favorites.
   useEffect(() => {
     if (!id) return;
 
     const token = getToken();
-    if (!token) return;
+
+    if (!token) {
+      setIsFavorite(false);
+      return;
+    }
+
+    const controller = new AbortController();
 
     const checkFavorite = async () => {
       try {
@@ -82,33 +130,50 @@ export default function EquipmentDetailsPage() {
               Authorization: `Bearer ${token}`,
             },
             cache: "no-store",
+            signal: controller.signal,
           }
         );
 
-        const result = await response.json();
+        const result = await readResponse(response);
 
-        if (response.ok && result.success) {
-          const exists = result.data?.some(
-            (favorite) =>
-              favorite.equipmentId?._id === id
-          );
+        if (!response.ok || !result.success) return;
 
-          setIsFavorite(Boolean(exists));
+        const favoriteList = Array.isArray(result.data)
+          ? result.data
+          : [];
+
+        const exists = favoriteList.some((favorite) => {
+          const favoriteEquipment = favorite.equipmentId;
+
+          const favoriteId =
+            typeof favoriteEquipment === "object"
+              ? favoriteEquipment?._id
+              : favoriteEquipment;
+
+          return String(favoriteId) === String(id);
+        });
+
+        if (!controller.signal.aborted) {
+          setIsFavorite(exists);
         }
       } catch (err) {
-        console.error("Favorite check failed:", err);
+        if (err.name !== "AbortError") {
+          console.error("Favorite check failed:", err);
+        }
       }
     };
 
     checkFavorite();
+
+    return () => controller.abort();
   }, [id]);
 
-  // Add to favorites
+  // Add equipment to favorites.
   const handleFavorite = async () => {
     const token = getToken();
 
     if (!token) {
-      showToast("Please login to add favorites.", "error");
+      showToast("Please login to add favorites.", "info");
       router.push("/login");
       return;
     }
@@ -117,6 +182,8 @@ export default function EquipmentDetailsPage() {
       showToast("Already added to your favorites.", "info");
       return;
     }
+
+    if (favoriteLoading) return;
 
     try {
       setFavoriteLoading(true);
@@ -135,7 +202,7 @@ export default function EquipmentDetailsPage() {
         }
       );
 
-      const result = await response.json();
+      const result = await readResponse(response);
 
       if (!response.ok || !result.success) {
         throw new Error(
@@ -144,34 +211,50 @@ export default function EquipmentDetailsPage() {
       }
 
       setIsFavorite(true);
-      showToast("Added to your favorites successfully!", "success");
+
+      showToast(
+        "Added to your favorites successfully!",
+        "success"
+      );
     } catch (err) {
-      showToast(err.message || "Something went wrong.", "error");
+      console.error("Add favorite error:", err);
+
+      showToast(
+        err.message || "Something went wrong.",
+        "error"
+      );
     } finally {
       setFavoriteLoading(false);
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  // Handle booking form changes.
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
     setForm((previous) => ({
       ...previous,
       [name]: value,
     }));
+
+    if (error) {
+      setError("");
+    }
   };
 
-  const calculateTotal = () => {
+  // Calculate rental duration and estimated total.
+  const calculateTotal = useCallback(() => {
     if (!equipment || !form.startDate || !form.endDate) {
       return 0;
     }
 
-    const start = new Date(form.startDate);
-    const end = new Date(form.endDate);
+    // Parse date-only values as UTC to avoid timezone differences.
+    const start = Date.parse(`${form.startDate}T00:00:00Z`);
+    const end = Date.parse(`${form.endDate}T00:00:00Z`);
 
     if (
-      Number.isNaN(start.getTime()) ||
-      Number.isNaN(end.getTime()) ||
+      !Number.isFinite(start) ||
+      !Number.isFinite(end) ||
       end <= start
     ) {
       return 0;
@@ -189,22 +272,43 @@ export default function EquipmentDetailsPage() {
       units = Math.ceil(duration / 30);
     }
 
-    return (
-      Number(equipment.rentalPrice) *
-      units *
-      Number(form.quantity || 1)
-    );
-  };
+    const price = Number(equipment.rentalPrice);
+    const quantity = Number(form.quantity);
 
-  // Booking and Stripe Payment
-  const handleBooking = async (e) => {
-    e.preventDefault();
+    if (
+      !Number.isFinite(price) ||
+      !Number.isFinite(quantity) ||
+      quantity < 1
+    ) {
+      return 0;
+    }
+
+    return price * units * quantity;
+  }, [equipment, form.startDate, form.endDate, form.quantity]);
+
+  const estimatedTotal = useMemo(
+    () => calculateTotal(),
+    [calculateTotal]
+  );
+
+  // Create booking and redirect to Stripe Checkout.
+  const handleBooking = async (event) => {
+    event.preventDefault();
+
+    if (submitting) return;
+
     setError("");
 
     const token = getToken();
 
     if (!token) {
+      showToast("Please login before booking.", "info");
       router.push("/login");
+      return;
+    }
+
+    if (!equipment) {
+      setError("Equipment information is not available.");
       return;
     }
 
@@ -213,28 +317,51 @@ export default function EquipmentDetailsPage() {
       return;
     }
 
-    if (new Date(form.endDate) <= new Date(form.startDate)) {
+    if (form.startDate < getToday()) {
+      setError("Start date cannot be in the past.");
+      return;
+    }
+
+    if (form.endDate <= form.startDate) {
       setError("End date must be after start date.");
       return;
     }
 
+    const quantity = Number(form.quantity);
+    const availableQuantity = Number(
+      equipment.availableQuantity
+    );
+
     if (
-      Number(form.quantity) < 1 ||
-      Number(form.quantity) > Number(equipment.availableQuantity)
+      !Number.isInteger(quantity) ||
+      quantity < 1 ||
+      quantity > availableQuantity
     ) {
-      setError("Requested quantity is not available.");
+      setError(
+        `Please enter a quantity between 1 and ${availableQuantity}.`
+      );
       return;
     }
 
-    if (!form.contactNumber.trim() || !form.deliveryAddress.trim()) {
-      setError("Please enter your contact number and delivery address.");
+    if (!form.contactNumber.trim()) {
+      setError("Please enter your contact number.");
+      return;
+    }
+
+    if (!form.deliveryAddress.trim()) {
+      setError("Please enter your delivery address.");
+      return;
+    }
+
+    if (!Number.isFinite(Number(equipment.rentalPrice))) {
+      setError("Invalid rental price.");
       return;
     }
 
     try {
       setSubmitting(true);
 
-      // Step 1: Create Booking
+      // STEP 1: CREATE BOOKING.
       const bookingResponse = await fetch(
         `${API_URL}/api/bookings`,
         {
@@ -247,7 +374,7 @@ export default function EquipmentDetailsPage() {
             equipmentId: id,
             startDate: form.startDate,
             endDate: form.endDate,
-            quantity: Number(form.quantity),
+            quantity,
             contactNumber: form.contactNumber.trim(),
             deliveryAddress: form.deliveryAddress.trim(),
             notes: form.notes.trim(),
@@ -255,7 +382,7 @@ export default function EquipmentDetailsPage() {
         }
       );
 
-      const bookingResult = await bookingResponse.json();
+      const bookingResult = await readResponse(bookingResponse);
 
       if (!bookingResponse.ok || !bookingResult.success) {
         throw new Error(
@@ -266,10 +393,10 @@ export default function EquipmentDetailsPage() {
       const bookingId = bookingResult.data?._id;
 
       if (!bookingId) {
-        throw new Error("Booking ID was not returned.");
+        throw new Error("Booking ID was not returned by server.");
       }
 
-      // Step 2: Create Stripe Checkout Session
+      // STEP 2: CREATE STRIPE CHECKOUT SESSION.
       const paymentResponse = await fetch(
         `${API_URL}/api/payments/create-checkout-session`,
         {
@@ -278,15 +405,18 @@ export default function EquipmentDetailsPage() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ bookingId }),
+          body: JSON.stringify({
+            bookingId,
+          }),
         }
       );
 
-      const paymentResult = await paymentResponse.json();
+      const paymentResult = await readResponse(paymentResponse);
 
       if (!paymentResponse.ok || !paymentResult.success) {
         throw new Error(
-          paymentResult.message || "Payment session creation failed."
+          paymentResult.message ||
+            "Payment session creation failed."
         );
       }
 
@@ -294,14 +424,21 @@ export default function EquipmentDetailsPage() {
         throw new Error("Stripe checkout URL was not returned.");
       }
 
-      // Step 3: Redirect to Stripe Checkout
+      // STEP 3: REDIRECT TO STRIPE.
       window.location.href = paymentResult.url;
     } catch (err) {
-      setError(err.message || "Something went wrong.");
+      console.error("Booking error:", err);
+
+      setError(
+        err.message ||
+          "Something went wrong while processing your booking."
+      );
+
       setSubmitting(false);
     }
   };
 
+  // Shared input styles.
   const inputStyle = {
     width: "100%",
     padding: "13px",
@@ -312,33 +449,89 @@ export default function EquipmentDetailsPage() {
     marginTop: "7px",
     outline: "none",
     boxSizing: "border-box",
+    fontFamily: "inherit",
   };
 
+  const labelStyle = {
+    display: "block",
+    marginTop: "18px",
+    fontWeight: 600,
+  };
+
+  // Loading state.
   if (loading) {
     return (
-      <main style={{ minHeight: "100vh" }}>
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "var(--background)",
+          color: "var(--foreground)",
+        }}
+      >
         <Navbar />
-        <p style={{ textAlign: "center", padding: "80px" }}>
-          Loading equipment details...
-        </p>
+
+        <div
+          style={{
+            textAlign: "center",
+            padding: "100px 20px",
+          }}
+        >
+          <p>Loading equipment details...</p>
+        </div>
       </main>
     );
   }
 
+  // Equipment not found state.
   if (error && !equipment) {
     return (
-      <main style={{ minHeight: "100vh" }}>
+      <main
+        style={{
+          minHeight: "100vh",
+          background: "var(--background)",
+          color: "var(--foreground)",
+        }}
+      >
         <Navbar />
-        <div style={{ textAlign: "center", padding: "80px 20px" }}>
+
+        <div
+          style={{
+            textAlign: "center",
+            padding: "100px 20px",
+          }}
+        >
           <h2>Equipment Not Found</h2>
-          <p>{error}</p>
-          <Link href="/equipment">Back to Equipment</Link>
+
+          <p
+            style={{
+              color: "var(--muted)",
+              margin: "15px 0 25px",
+            }}
+          >
+            {error}
+          </p>
+
+          <Link
+            href="/equipment"
+            style={{
+              color: "var(--accent)",
+              textDecoration: "none",
+              fontWeight: 700,
+            }}
+          >
+            ← Back to Equipment
+          </Link>
         </div>
       </main>
     );
   }
 
   if (!equipment) return null;
+
+  const availableQuantity =
+    Number(equipment.availableQuantity) || 0;
+
+  const isAvailable = availableQuantity > 0;
 
   return (
     <main
@@ -358,6 +551,7 @@ export default function EquipmentDetailsPage() {
           padding: "0 20px",
         }}
       >
+        {/* BACK NAVIGATION */}
         <Link
           href="/equipment"
           style={{
@@ -379,10 +573,19 @@ export default function EquipmentDetailsPage() {
             alignItems: "start",
           }}
         >
+          {/* EQUIPMENT DETAILS */}
           <section>
             <img
-              src={equipment.imageUrl}
-              alt={equipment.equipmentName}
+              src={
+                equipment.imageUrl ||
+                "/images/placeholder.png"
+              }
+              alt={equipment.equipmentName || "Equipment"}
+              onError={(event) => {
+                event.currentTarget.onerror = null;
+                event.currentTarget.src =
+                  "/images/placeholder.png";
+              }}
               style={{
                 width: "100%",
                 height: "380px",
@@ -393,18 +596,37 @@ export default function EquipmentDetailsPage() {
             />
 
             <div style={{ marginTop: "25px" }}>
-              <span style={{ color: "var(--accent)", fontWeight: 700 }}>
+              <span
+                style={{
+                  color: "var(--accent)",
+                  fontWeight: 700,
+                }}
+              >
                 {equipment.category}
               </span>
 
-              <h1 style={{ fontSize: "32px", margin: "10px 0" }}>
+              <h1
+                style={{
+                  fontSize: "32px",
+                  margin: "10px 0",
+                  lineHeight: 1.3,
+                }}
+              >
                 {equipment.equipmentName}
               </h1>
 
-              <p style={{ color: "var(--muted)", lineHeight: 1.8 }}>
-                {equipment.description}
+              <p
+                style={{
+                  color: "var(--muted)",
+                  lineHeight: 1.8,
+                  whiteSpace: "pre-wrap",
+                }}
+              >
+                {equipment.description ||
+                  "No description available for this equipment."}
               </p>
 
+              {/* FAVORITE BUTTON */}
               <button
                 type="button"
                 onClick={handleFavorite}
@@ -416,8 +638,12 @@ export default function EquipmentDetailsPage() {
                   marginTop: "18px",
                   borderRadius: "30px",
                   border: "1px solid var(--border)",
-                  background: isFavorite ? "var(--accent)" : "var(--surface-card)",
-                  color: isFavorite ? "var(--accent-text)" : "var(--foreground)",
+                  background: isFavorite
+                    ? "var(--accent)"
+                    : "var(--surface-card)",
+                  color: isFavorite
+                    ? "var(--accent-text)"
+                    : "var(--foreground)",
                   fontWeight: 700,
                   fontSize: "15px",
                   cursor: favoriteLoading ? "wait" : "pointer",
@@ -431,10 +657,12 @@ export default function EquipmentDetailsPage() {
                     : "♡ Add to Favorites"}
               </button>
 
+              {/* EQUIPMENT SPECIFICATIONS */}
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gridTemplateColumns:
+                    "repeat(2, minmax(0, 1fr))",
                   gap: "15px",
                   marginTop: "25px",
                 }}
@@ -445,7 +673,7 @@ export default function EquipmentDetailsPage() {
                   ["Condition", equipment.condition],
                   ["Location", equipment.location],
                   ["Rental Type", equipment.rentalType],
-                  ["Available Quantity", equipment.availableQuantity],
+                  ["Available Quantity", availableQuantity],
                 ].map(([label, value]) => (
                   <div
                     key={label}
@@ -454,49 +682,112 @@ export default function EquipmentDetailsPage() {
                       borderRadius: "12px",
                       background: "var(--surface-card)",
                       border: "1px solid var(--border)",
+                      minWidth: 0,
                     }}
                   >
                     <small style={{ color: "var(--muted)" }}>
                       {label}
                     </small>
-                    <p style={{ fontWeight: 700, marginTop: "6px" }}>
+
+                    <p
+                      style={{
+                        fontWeight: 700,
+                        marginTop: "6px",
+                        overflowWrap: "anywhere",
+                      }}
+                    >
                       {value || "Not specified"}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <h3 style={{ marginTop: "25px" }}>Rental Terms</h3>
-              <p style={{ color: "var(--muted)", lineHeight: 1.8 }}>
+              {/* RENTAL TERMS */}
+              <h3 style={{ marginTop: "25px" }}>
+                Rental Terms
+              </h3>
+
+              <p
+                style={{
+                  color: "var(--muted)",
+                  lineHeight: 1.8,
+                  marginTop: "8px",
+                  whiteSpace: "pre-wrap",
+                }}
+              >
                 {equipment.rentalTerms ||
                   "Contact the equipment owner for rental terms."}
               </p>
             </div>
           </section>
 
+          {/* BOOKING PANEL */}
           <section
             style={{
               padding: "25px",
               borderRadius: "20px",
               background: "var(--surface-card)",
               border: "1px solid var(--border)",
+              minWidth: 0,
             }}
           >
-            <p style={{ color: "var(--muted)" }}>Rental Price</p>
+            <p style={{ color: "var(--muted)" }}>
+              Rental Price
+            </p>
 
-            <h2 style={{ fontSize: "30px", margin: "8px 0 25px" }}>
-              ৳{Number(equipment.rentalPrice).toLocaleString()}
-              <span style={{ fontSize: "15px", color: "var(--muted)" }}>
-                {" "}/ {equipment.rentalType}
+            <h2
+              style={{
+                fontSize: "30px",
+                margin: "8px 0 25px",
+              }}
+            >
+              ৳
+              {Number(equipment.rentalPrice || 0).toLocaleString(
+                "en-BD"
+              )}
+
+              <span
+                style={{
+                  fontSize: "15px",
+                  color: "var(--muted)",
+                }}
+              >
+                {" "}
+                / {equipment.rentalType || "Daily"}
               </span>
             </h2>
 
-            <h2 style={{ fontSize: "22px", marginBottom: "20px" }}>
+            {/* AVAILABILITY STATUS */}
+            <div
+              style={{
+                padding: "12px 15px",
+                borderRadius: "10px",
+                marginBottom: "22px",
+                background: isAvailable
+                  ? "rgba(34, 197, 94, 0.10)"
+                  : "rgba(239, 68, 68, 0.10)",
+                color: isAvailable ? "#16a34a" : "#dc2626",
+                fontWeight: 700,
+              }}
+            >
+              {isAvailable
+                ? `${availableQuantity} unit(s) available`
+                : "Currently unavailable"}
+            </div>
+
+            <h2
+              style={{
+                fontSize: "22px",
+                marginBottom: "20px",
+              }}
+            >
               Book This Equipment
             </h2>
 
+            {/* BOOKING ERROR */}
             {error && (
               <p
+                role="alert"
                 style={{
                   padding: "12px",
                   background: "#fee2e2",
@@ -510,84 +801,107 @@ export default function EquipmentDetailsPage() {
             )}
 
             <form onSubmit={handleBooking}>
-              <label>
+              {/* START DATE */}
+              <label style={labelStyle}>
                 Start Date
+
                 <input
                   type="date"
                   name="startDate"
                   required
-                  min={new Date().toLocaleDateString("en-CA")}
+                  min={getToday()}
                   value={form.startDate}
                   onChange={handleChange}
                   style={inputStyle}
                 />
               </label>
 
-              <label style={{ display: "block", marginTop: "18px" }}>
+              {/* END DATE */}
+              <label style={labelStyle}>
                 End Date
+
                 <input
                   type="date"
                   name="endDate"
                   required
-                  min={form.startDate || new Date().toLocaleDateString("en-CA")}
+                  min={form.startDate || getToday()}
                   value={form.endDate}
                   onChange={handleChange}
                   style={inputStyle}
                 />
               </label>
 
-              <label style={{ display: "block", marginTop: "18px" }}>
+              {/* QUANTITY */}
+              <label style={labelStyle}>
                 Quantity
+
                 <input
                   type="number"
                   name="quantity"
                   min="1"
-                  max={equipment.availableQuantity}
+                  max={availableQuantity}
                   required
                   value={form.quantity}
                   onChange={handleChange}
                   style={inputStyle}
+                  disabled={!isAvailable}
                 />
               </label>
 
-              <label style={{ display: "block", marginTop: "18px" }}>
+              {/* CONTACT NUMBER */}
+              <label style={labelStyle}>
                 Contact Number
+
                 <input
                   type="tel"
                   name="contactNumber"
                   placeholder="Enter your phone number"
                   required
+                  maxLength={20}
                   value={form.contactNumber}
                   onChange={handleChange}
                   style={inputStyle}
                 />
               </label>
 
-              <label style={{ display: "block", marginTop: "18px" }}>
+              {/* DELIVERY ADDRESS */}
+              <label style={labelStyle}>
                 Delivery Address
+
                 <textarea
                   name="deliveryAddress"
                   placeholder="Enter your complete address"
                   required
-                  rows="3"
+                  rows={3}
+                  maxLength={500}
                   value={form.deliveryAddress}
                   onChange={handleChange}
-                  style={{ ...inputStyle, resize: "vertical" }}
+                  style={{
+                    ...inputStyle,
+                    resize: "vertical",
+                  }}
                 />
               </label>
 
-              <label style={{ display: "block", marginTop: "18px" }}>
+              {/* OPTIONAL NOTES */}
+              <label style={labelStyle}>
                 Additional Notes (Optional)
+
                 <textarea
                   name="notes"
                   placeholder="Any special instructions?"
-                  rows="2"
+                  rows={2}
+                  maxLength={1000}
                   value={form.notes}
                   onChange={handleChange}
-                  style={{ ...inputStyle, resize: "vertical" }}
+                  style={{
+                    ...inputStyle,
+                    resize: "vertical",
+                  }}
                 />
               </label>
 
+              {/* ESTIMATED TOTAL */}
               <div
                 style={{
                   marginTop: "25px",
@@ -596,21 +910,33 @@ export default function EquipmentDetailsPage() {
                   borderRadius: "12px",
                 }}
               >
-                <p style={{ color: "var(--muted)" }}>Estimated Total</p>
-                <h2 style={{ fontSize: "28px", marginTop: "8px" }}>
-                  ৳{calculateTotal().toLocaleString()}
+                <p style={{ color: "var(--muted)" }}>
+                  Estimated Total
+                </p>
+
+                <h2
+                  style={{
+                    fontSize: "28px",
+                    marginTop: "8px",
+                  }}
+                >
+                  ৳
+                  {estimatedTotal.toLocaleString("en-BD")}
                 </h2>
+
                 <small style={{ color: "var(--muted)" }}>
                   Final amount is calculated by the server.
                 </small>
               </div>
 
+              {/* BOOKING BUTTON */}
               <button
                 type="submit"
                 disabled={
                   submitting ||
-                  !equipment.availableQuantity ||
-                  Number(equipment.availableQuantity) < 1
+                  !isAvailable ||
+                  !form.startDate ||
+                  !form.endDate
                 }
                 style={{
                   width: "100%",
@@ -623,10 +949,15 @@ export default function EquipmentDetailsPage() {
                   fontWeight: 800,
                   fontSize: "15px",
                   cursor: submitting ? "wait" : "pointer",
-                  opacity: submitting ? 0.6 : 1,
+                  opacity:
+                    submitting || !isAvailable ? 0.6 : 1,
                 }}
               >
-                {submitting ? "Processing..." : "Book & Pay Now →"}
+                {submitting
+                  ? "Processing..."
+                  : !isAvailable
+                    ? "Currently Unavailable"
+                    : "Book & Pay Now →"}
               </button>
             </form>
           </section>

@@ -12,13 +12,16 @@ The purpose of Equipora is to make equipment renting simple, accessible, and con
 
 ## Live Website
 
-- **Live URL:** Not deployed yet. Update this after deployment.
+- **Live URL:** https://assignment-09-wheat.vercel.app/
 - **GitHub Repository:** https://github.com/diptadevroy091-gif/Assignment-09
+- **Frontend Repository Folder:** https://github.com/diptadevroy091-gif/Assignment-09/tree/main/client
+- **Backend Repository Folder:** https://github.com/diptadevroy091-gif/Assignment-09/tree/main/server
 
 ## Key Features
 
 - Email and password authentication.
 - Google OAuth authentication.
+- GitHub OAuth authentication.
 - Role-based access control for Customer, Owner, and Admin.
 - Browse and search approved equipment.
 - Filter and sort equipment by category, rental type, price, and availability.
@@ -49,12 +52,14 @@ The purpose of Equipora is to make equipment renting simple, accessible, and con
 - Manage listed equipment.
 - Update and delete equipment.
 - Manage equipment rental information.
+- Monitor rental activities.
 
 ### Admin
 - Manage registered users.
 - Change user roles.
 - Approve or reject equipment listings.
 - Manage equipment records.
+- Monitor platform activities.
 
 ## Technologies Used
 
@@ -113,6 +118,7 @@ The purpose of Equipora is to make equipment renting simple, accessible, and con
 Assignment-09/
 ├── client/
 │   ├── app/
+│   ├── components/
 │   ├── public/
 │   └── package.json
 ├── server/
@@ -129,12 +135,13 @@ Assignment-09/
 ## Installation and Setup
 
 ### Prerequisites
+
 - Node.js
 - npm
 - MongoDB database
 - Stripe account for test payments
-- Google OAuth credentials if using Google login
-- GitHub OAuth credentials if using GitHub login
+- Google OAuth credentials (if using Google login)
+- GitHub OAuth credentials (if using GitHub login)
 
 ### 1. Clone the Repository
 
@@ -150,7 +157,7 @@ cd server
 npm install
 ```
 
-Create a `.env` file inside the `server` directory and configure the environment variables required by the server, including database, authentication, OAuth, and Stripe settings.
+Create a `.env` file inside the `server` directory and configure the required environment variables for MongoDB, JWT, OAuth, Stripe, and frontend URL.
 
 Never commit your `.env` file or expose secret keys.
 
@@ -172,7 +179,7 @@ npm install
 Create a `.env.local` file inside the `client` directory:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
 
 Start the frontend development server:
@@ -194,6 +201,12 @@ Backend:
 ```text
 http://localhost:5000
 ```
+
+## Deployment
+
+- **Frontend:** Deployed on Vercel.
+- **Backend:** Deployed on Render.
+- **Database:** MongoDB.
 
 ## Security Notes
 

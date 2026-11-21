@@ -83,7 +83,6 @@ export default function Home() {
 
     const loadHomeData = async () => {
       try {
-        // Load approved equipment
         const equipmentResponse = await fetch(
           `${API_URL}/api/equipment`
         );
@@ -103,7 +102,6 @@ export default function Home() {
 
           setEquipment(equipmentData.slice(0, 6));
 
-          // Use the actual total returned by the API.
           const actualTotal = Number(equipmentResult.total);
 
           setTotalEquipment(
@@ -113,7 +111,7 @@ export default function Home() {
           );
         }
 
-        // Load logged-in user
+        // LOAD LOGGED-IN USER
         const savedUser = localStorage.getItem("equipora-user");
         const user = savedUser ? JSON.parse(savedUser) : null;
 
@@ -122,7 +120,7 @@ export default function Home() {
           setAuthLoaded(true);
         }
 
-        // Load favorites from MongoDB
+        // LOAD CUSTOMER FAVORITES
         const token = getToken();
 
         if (token && user?.role === "Customer") {
@@ -200,6 +198,40 @@ export default function Home() {
     authLoaded &&
     (!currentUser || currentUser.role === "Customer");
 
+  // PROTECT EQUIPMENT DETAILS PAGE
+  const handleViewDetails = (event, item) => {
+    const token = getToken();
+    const savedUser = localStorage.getItem("equipora-user");
+
+    let user = null;
+
+    try {
+      user = savedUser ? JSON.parse(savedUser) : null;
+    } catch {
+      user = null;
+    }
+
+    // LOGIN REQUIRED
+    if (!token || !user || !user._id) {
+      event.preventDefault();
+
+      showToast(
+        "Please login first to view equipment details.",
+        "info"
+      );
+
+      const destination = `/equipment/${item._id}`;
+
+      router.push(
+        `/login?callbackUrl=${encodeURIComponent(destination)}`
+      );
+
+      return;
+    }
+
+    // LOGGED-IN USERS CAN VIEW DETAILS
+  };
+
   // ADD OR REMOVE FAVORITE USING MONGODB
   const handleFavorite = async (item) => {
     const token = getToken();
@@ -220,7 +252,11 @@ export default function Home() {
     try {
       user = JSON.parse(savedUser);
     } catch {
-      showToast("Your session is invalid. Please login again.", "error");
+      showToast(
+        "Your session is invalid. Please login again.",
+        "error"
+      );
+
       router.push("/login");
       return;
     }
@@ -395,7 +431,6 @@ export default function Home() {
             </button>
           </div>
 
-          {/* REAL PLATFORM INFORMATION */}
           <div className="hero-stats">
             <div>
               <strong>
@@ -586,6 +621,9 @@ export default function Home() {
                       <Link
                         href={`/equipment/${equipmentId}`}
                         className="rent-btn"
+                        onClick={(event) =>
+                          handleViewDetails(event, item)
+                        }
                       >
                         View Details ↗
                       </Link>

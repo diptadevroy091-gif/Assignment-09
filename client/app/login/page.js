@@ -110,6 +110,8 @@ function LoginForm() {
         JSON.stringify(result.data)
       );
 
+      window.dispatchEvent(new Event("equipora-auth-changed"));
+
       const returnTo = searchParams.get("callbackUrl");
 
       if (
@@ -239,7 +241,7 @@ function LoginForm() {
             >
               {loading
                 ? "Signing in..."
-                : "Sign in to your account ↗"}
+                : "Sign in to your account"}
             </button>
           </form>
 
